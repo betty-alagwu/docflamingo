@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id                String @id @default(auto()) @map("_id") @db.ObjectId
+  clerkUserId       String @unique
+  githubAccessToken String
+
+  installations Installation[]
+}
+
+model Installation {
+  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  githubInstallationId Int
+  Customer             Customer? @relation(fields: [customerId], references: [id])
+  customerId           String?   @db.ObjectId
+}
+
+model Job {
+  id                  String @id @default(auto()) @map("_id") @db.ObjectId
+  customerId          String
+  githubRepositoryId  Int
+  githubPullRequestId Int
+}
+
+model Suggestion {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
