@@ -5,6 +5,7 @@ import { writeFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { App, type Octokit } from "octokit";
 import { AIService } from "../ai.service";
+import { FileInfo, TokenHandler } from "../token-handler.service";
 
 
 interface FilePatchInfo {
@@ -34,6 +35,10 @@ export class GithubService {
     this.octokit = await this.app.getInstallationOctokit(this.payload.installation.id)
   }
 
+  /**
+   * Get the diff files for the pull request
+   * @returns {Promise<FilePatchInfo[]>}
+   */
   public async getDiffFiles(): Promise<FilePatchInfo[]> {
     const mergeCommitSha = await this.getMergeBaseCommit()
 
@@ -105,8 +110,6 @@ export class GithubService {
       await setTimeout(100);
     }
 
-    writeFile('output.tsx', JSON.stringify(filesPatchInfo, null, 2))
-
     return filesPatchInfo
   }
 
@@ -141,16 +144,36 @@ export class GithubService {
       const repo =  this.payload.repository.name;
       const prNumber = this.payload.number;
 
-      const sampleFile = files.find(file => file.patch);
-      if (!sampleFile) throw new Error('No files with patches found');
+      // Get the system prompt to initialize the token handler
+      const systemPrompt = this.aiService.getSystemPrompt();
+      // Use a higher token limit for DeepSeek models (32K context)
+      const tokenHandler = new TokenHandler(systemPrompt, 30000, {
+        OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: 3000,  // Higher value - more lenient threshold
+        OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: 2000   // Lower value - more restrictive threshold
+      });
 
-      const analysis = await this.aiService.analyzePullRequest(
-        `File: ${sampleFile.filename}\n${sampleFile.patch}`,
+      // Convert files to the format expected by TokenHandler
+      const fileInfos: FileInfo[] = files
+        .filter(file => file.patch)
+        .map(file => ({
+          filename: file.filename,
+          patch: file.patch
+        }));
+
+      if (fileInfos.length === 0) {
+        throw new Error('No files with patches found');
+      }
+
+      // Process files with token limits in mind
+      const processedDiff = await tokenHandler.processFiles(fileInfos);
+
+      // Send the processed diff to the AI service
+      await this.aiService.analyzePullRequest(
+        processedDiff,
         owner.login,
         repo,
         prNumber
       );
-      console.log('Analysis Result:', analysis);
 
     } catch (error) {
       throw new Error('LLM Integration Test Failed:' + error);

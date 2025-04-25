@@ -10,8 +10,6 @@ export class ProcessNewPullRequestService {
   await githubService.testLLMIntegration();
 
   const patchDiff = await githubService.getDiffFiles();
-  // console.dir(patchDiff[0], { depth: null, colors: true, })
-
   return patchDiff;
  }
 }
