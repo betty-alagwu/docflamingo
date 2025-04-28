@@ -95,14 +95,32 @@ export class AIService {
         prompt: `${systemPrompt}\n\n${userPrompt}`,
       });
 
-      if (text) {
-        const parsedResponse = this.parseAIResponse(text);
-        const review = parsedResponse.review;
-        const allComments: FormattedComment[] = [];
+      console.log(text, "texttexttext");
 
-        // Process code suggestions first (they're more detailed)
-        if (review.codeSuggestions && review.codeSuggestions.length > 0) {
-          const suggestionComments = this.formatCodeSuggestionsForGitHub(review.codeSuggestions);
+      if (text) {
+        try {
+          const parsedResponse = this.parseAIResponse(text);
+          logger.info(`AI response parsed successfully`);
+
+          const review = parsedResponse.review;
+          const allComments: FormattedComment[] = [];
+
+          // Process code suggestions with their corresponding key issues
+          if (review.codeSuggestions && review.codeSuggestions.length > 0) {
+          const keyIssuesMap = new Map<string, KeyIssue>();
+
+          if (review.keyIssuesToReview && review.keyIssuesToReview.length > 0) {
+            review.keyIssuesToReview.forEach(issue => {
+              // Create a key using file path and line numbers
+              const key = `${issue.relevantFile}:${issue.startLine}`;
+              keyIssuesMap.set(key, issue);
+            });
+          }
+
+          const suggestionComments = this.formatCodeSuggestionsWithKeyIssues(
+            review.codeSuggestions,
+            keyIssuesMap
+          );
           allComments.push(...suggestionComments);
         }
 
@@ -110,77 +128,55 @@ export class AIService {
         if (allComments.length > 0) {
           await this.postCommentToGitHub(owner, repo, prNumber, allComments);
         }
+        } catch (parseError) {
+          logger.error(`Error processing AI response: ${parseError}`);
+          throw new Error(`Error processing AI response: ${parseError}`);
+        }
       }
 
-      return { success: true };
     } catch (error) {
       throw new Error(`Error analyzing pull request: ${error}`);
     }
   }
 
-  private formatCodeSuggestionsForGitHub(
-    codeSuggestions: CodeSuggestion[]
+  private formatCodeSuggestionsWithKeyIssues(
+    codeSuggestions: CodeSuggestion[],
+    keyIssuesMap: Map<string, KeyIssue>
   ): FormattedComment[] {
     return codeSuggestions.map((suggestion) => {
       const originalCode = suggestion.originalCode || suggestion.suggestedCode;
 
-      // Extract filename without extension for use in the message
-      const filename = suggestion.relevantFile
-        .split("/")
-        .pop() || ""  // Handle potential undefined with empty string fallback
-        .replace(/\.[^/.]+$/, "");
+      const suggestionKey = `${suggestion.relevantFile}:${suggestion.startLine}`;
+      const keyIssue = keyIssuesMap.get(suggestionKey);
 
-      // Determine if this is a method-related issue
-      const isMethodIssue =
-        suggestion.explanation.toLowerCase().includes("method") ||
-        originalCode.includes(".") ||
-        suggestion.suggestedCode.includes(".");
+      // Determine the issue header and content
+      let issueHeader = "Code Suggestion";
+      let issueContent = suggestion.explanation;
 
-      // Determine the issue type for better messaging
-      let issueType = "Refactor suggestion";
-      if (isMethodIssue) {
-        issueType = "Method issue";
-      } else if (suggestion.explanation.toLowerCase().includes("incomplete")) {
-        issueType = "Incomplete code";
+      if (keyIssue) {
+        // Use the key issue's header and content if available
+        issueHeader = keyIssue.issueHeader;
+        issueContent = keyIssue.issueContent;
       }
 
-      // Format as GitHub compatible comment with suggested code change in CodeRabbit style
-      const body = `🔧 **${issueType}**
+      const body = `🔧 **${issueHeader}**
 
 ⚠️ **Potential issue**
 
-${suggestion.explanation}
+${issueContent}
 
-${
-  originalCode !== suggestion.suggestedCode
-    ? `\`${originalCode}\` is not valid TypeScript/JavaScript; the ${
-        isMethodIssue
-          ? "empty parenthesised expression causes a compile-time failure"
-          : "code causes a compile-time failure"
-      }.`
-    : "The current implementation can be improved."
-}
+${originalCode ? `Current code:\n\`${originalCode}\`` : ""}
 
-${
-  isMethodIssue
-    ? `Function \`${filename}\` still expects a working ${
-        originalCode.split(".")[0]
-      } connection, so the handler will explode at runtime even if the file manages to compile.`
-    : ""
-}
-
-Recommended quick fix:
+Recommended fix:
 
 \`\`\`diff
-- ${originalCode}
+${originalCode ? `- ${originalCode}` : ""}
 + ${suggestion.suggestedCode}
 \`\`\`
 
-* ${
-        isMethodIssue ? "Re-introduces the correct method name" : "Improves code correctness"
-      } to ensure intended functionality.
-* Prevents potential runtime errors.
-* Ensures the code functions as intended.
+* Improves code correctness and functionality
+* Addresses the issue described above
+* Ensures the code works as intended
       `;
 
       return {
@@ -197,181 +193,115 @@ Recommended quick fix:
       const { data: prData } = await this.octokit.rest.pulls.get({ owner, repo, pull_number: prNumber });
       const commitId = prData.head.sha;
 
-      // Fetch the PR files to get the correct line numbers
       const { data: prFiles } = await this.octokit.rest.pulls.listFiles({
         owner,
         repo,
         pull_number: prNumber,
       });
 
-      // Prepare comments for the review
-      const comments: Array<{
-        path: string;
-        body: string;
-        line: number;
-        side: string;
-      }> = [];
+      // Process each file to find the actual changed lines
+      const fileChanges = new Map<string, Set<number>>();
 
-      for (const comment of reviewComments) {
-        // Find the corresponding file in the PR
-        const prFile = prFiles.find((file: { filename: string; patch?: string }) => file.filename === comment.path);
-        if (!prFile || !prFile.patch) {
-          continue;
-        }
+      for (const file of prFiles) {
+        if (!file.patch) continue
 
-        // Extract the diff hunk from the patch
-        const patchLines = prFile.patch.split("\n");
-        let diffHunk = "";
-        let lineNumber = -1;
-        let foundLine = false;
-
-        // Extract the line mapping from the patch header
-        const patchHeaderMatch = prFile.patch.match(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/);
-        if (!patchHeaderMatch) {
-          logger.info(`Skipping comment for ${comment.path} - could not parse patch header`);
-          continue;
-        }
-
-        const oldStart = parseInt(patchHeaderMatch[1], 10);
-        const newStart = parseInt(patchHeaderMatch[3], 10);
-        const lineOffset = newStart - oldStart;
-
-        // Create a map of all changed lines in the patch
         const changedLines = new Set<number>();
-        let currentLineNumber = newStart;
+        const patchLines = file.patch.split('\n');
+        let currentLine = 0;
 
-        // Process the patch to find all changed lines
-        for (let i = 0; i < patchLines.length; i++) {
-          const line = patchLines[i];
+        const hunkHeaderMatch = file.patch.match(/@@ -\d+,\d+ \+(\d+),\d+ @@/);
+        if (hunkHeaderMatch) {
+          currentLine = parseInt(hunkHeaderMatch[1], 10);
+        }
 
-          // If this is a hunk header, reset the line number
-          if (line.startsWith("@@")) {
-            const hunkMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/);
-            if (hunkMatch) {
-              currentLineNumber = parseInt(hunkMatch[3], 10);
+        // Process each line in the patch
+        for (const line of patchLines) {
+          if (line.startsWith('@@')) {
+            const match = line.match(/@@ -\d+,\d+ \+(\d+),\d+ @@/);
+            if (match) {
+              currentLine = parseInt(match[1], 10);
             }
             continue;
           }
 
-          // Skip removed lines
-          if (line.startsWith("-")) {
-            continue;
+          if (line.startsWith('+') && !line.startsWith('+++')) {
+            changedLines.add(currentLine);
           }
 
-          // Mark added lines as changed
-          if (line.startsWith("+")) {
-            changedLines.add(currentLineNumber);
-          }
-
-          // Increment line number for context and added lines
-          currentLineNumber++;
-        }
-
-        // Calculate the target line number
-        lineNumber = comment.startLine + lineOffset;
-
-        // Check if the line is part of the diff
-        const isLineInDiff = changedLines.has(lineNumber);
-
-        // If the line isn't in the diff, find the closest changed line
-        if (!isLineInDiff) {
-          logger.info(`Line ${lineNumber} in ${comment.path} is not part of the diff`);
-
-          // Find the closest changed line
-          let closestLine = -1;
-          let minDistance = Number.MAX_SAFE_INTEGER;
-
-          // Convert Set to Array for iteration
-          Array.from(changedLines).forEach((changedLine) => {
-            const distance = Math.abs(changedLine - lineNumber);
-            if (distance < minDistance) {
-              minDistance = distance;
-              closestLine = changedLine;
-            }
-          });
-
-          if (closestLine !== -1) {
-            lineNumber = closestLine;
-            foundLine = true;
-          } else {
-            foundLine = false;
-          }
-        } else {
-          foundLine = true;
-        }
-
-        // Extract the diff hunk for the line
-        if (foundLine) {
-          // Find the hunk that contains this line
-          let hunkStart = 0;
-          for (let i = 0; i < patchLines.length; i++) {
-            const line = patchLines[i];
-            if (line.startsWith("@@")) {
-              const hunkMatch = line.match(/^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/);
-              if (hunkMatch) {
-                const hunkNewStart = parseInt(hunkMatch[3], 10);
-                const hunkNewLines = parseInt(hunkMatch[4], 10);
-                const hunkNewEnd = hunkNewStart + hunkNewLines - 1;
-
-                if (lineNumber >= hunkNewStart && lineNumber <= hunkNewEnd) {
-                  // Found the right hunk
-                  hunkStart = i;
-                  diffHunk = line + "\n";
-                  break;
-                }
-              }
-            }
-          }
-
-          // Add context lines to the diff hunk
-          if (hunkStart > 0) {
-            // Add up to 5 lines of context
-            const contextLines = patchLines.slice(hunkStart + 1, hunkStart + 6);
-            diffHunk += contextLines.join("\n");
+          // Increment line number for all lines except removed lines
+          if (!line.startsWith('-') || line.startsWith('---')) {
+            currentLine++;
           }
         }
 
-        // Only add line comments for lines that are part of the diff
-        if (foundLine) {
-          comments.push({
-            path: comment.path,
-            body: comment.body,
-            line: lineNumber,
-            side: "RIGHT",
-          });
-        }
+        fileChanges.set(file.filename, changedLines);
       }
 
-      // If we have comments, post them individually
-      if (comments.length > 0) {
-        // Post individual comments directly - more reliable than batch review
-        for (const comment of comments) {
+      // Map comments to the closest changed lines
+      const mappedComments = reviewComments.map(comment => {
+        const changedLines = fileChanges.get(comment.path);
+        if (!changedLines || changedLines.size === 0) {
+          return {
+            ...comment,
+            mappedLine: Number(comment.startLine)
+          };
+        }
+
+        // Find the closest changed line to the comment's startLine
+        const startLine = Number(comment.startLine);
+        let closestLine = startLine;
+        let minDistance = Number.MAX_SAFE_INTEGER;
+
+        Array.from(changedLines).forEach(line => {
+          const distance = Math.abs(line - startLine);
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestLine = line;
+          }
+        });
+
+        return {
+          ...comment,
+          mappedLine: closestLine
+        };
+      });
+
+      // First try to create a unified review with all comments
+      try {
+        const comments = mappedComments.map(comment => ({
+          path: comment.path,
+          line: comment.mappedLine,
+          side: "RIGHT",
+          body: comment.body
+        }));
+
+        await this.octokit.rest.pulls.createReview({
+          owner,
+          repo,
+          pull_number: prNumber,
+          commit_id: commitId,
+          event: 'COMMENT',
+          comments: comments
+        });
+
+      } catch (reviewError) {
+        for (let index = 0; index < mappedComments.length; index++) {
+          const comment = mappedComments[index];
+
+          logger.info(`Posting individual comment ${index + 1}/${mappedComments.length} for file ${comment.path}`);
+
           try {
-            await this.octokit.rest.pulls.createReviewComment({
+            const commentBody = `**Comment for ${comment.path} line ${comment.mappedLine}**\n\n${comment.body}`;
+            await this.octokit.rest.issues.createComment({
               owner,
               repo,
-              pull_number: prNumber,
-              body: comment.body,
-              commit_id: commitId,
-              path: comment.path,
-              line: comment.line,
-              side: comment.side,
+              issue_number: prNumber,
+              body: commentBody,
             });
-            // Add a small delay to avoid rate limiting
+
             await new Promise((resolve) => setTimeout(resolve, 500));
           } catch (commentError) {
-            logger.info(`Error posting comment to ${comment.path}:${comment.line}: ${commentError}`);
-            // Last resort: post as a regular PR comment
-            try {
-              await this.octokit.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: prNumber,
-                body: `**Comment for ${comment.path} line ${comment.line}**\n\n${comment.body}`,
-              });
-            } catch (commentError) {
-              logger.error(`Failed to post as issue comment: ${commentError}`);
-            }
+            logger.error(`Failed to post comment ${index + 1}: ${commentError}`);
           }
         }
       }
@@ -381,8 +311,26 @@ Recommended quick fix:
   }
 
   private parseAIResponse(text: string): AIReviewResponse {
-    const jsonString = text.replace(/```json\n|```/g, "").trim();
-    return JSON.parse(jsonString) as AIReviewResponse;
+    try {
+      logger.info(`Cleaning AI response text for JSON parsing`);
+      const jsonString = text.replace(/```json\n|```/g, "").trim();
+
+      logger.info(`Parsing JSON string (length: ${jsonString.length})`);
+      const parsedJson = JSON.parse(jsonString) as AIReviewResponse;
+
+      // Validate the response structure
+      if (!parsedJson.review) {
+        logger.error(`Invalid AI response: Missing 'review' property`);
+        throw new Error(`Invalid AI response: Missing 'review' property`);
+      }
+
+      logger.info(`Successfully parsed AI response JSON`);
+      return parsedJson;
+    } catch (error) {
+      logger.error(`Error parsing AI response: ${error}`);
+      logger.error(`AI response text (first 200 chars): ${text.substring(0, 200)}...`);
+      throw new Error(`Failed to parse AI response: ${error}`);
+    }
   }
 
   public getSystemPrompt(): string {

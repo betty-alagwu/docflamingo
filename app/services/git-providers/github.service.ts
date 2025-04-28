@@ -8,7 +8,7 @@ import { AIService } from "../ai.service";
 import { FileInfo, TokenHandler } from "../token-handler.service";
 
 
-interface FilePatchInfo {
+export interface FilePatchInfo {
   filename: string;
   newContent: {
     content: string
@@ -146,13 +146,11 @@ export class GithubService {
 
       // Get the system prompt to initialize the token handler
       const systemPrompt = this.aiService.getSystemPrompt();
-      // Use a higher token limit for DeepSeek models (32K context)
       const tokenHandler = new TokenHandler(systemPrompt, 30000, {
         OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: 3000,  // Higher value - more lenient threshold
         OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: 2000   // Lower value - more restrictive threshold
       });
 
-      // Convert files to the format expected by TokenHandler
       const fileInfos: FileInfo[] = files
         .filter(file => file.patch)
         .map(file => ({
@@ -164,10 +162,8 @@ export class GithubService {
         throw new Error('No files with patches found');
       }
 
-      // Process files with token limits in mind
       const processedDiff = await tokenHandler.processFiles(fileInfos);
 
-      // Send the processed diff to the AI service
       await this.aiService.analyzePullRequest(
         processedDiff,
         owner.login,
