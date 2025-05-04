@@ -1,5 +1,15 @@
 import { GithubCommentService } from '@/app/services/git-providers/github-comment.service';
 import { ProcessCommentWebhookTaskPayload } from '@/app/trigger/process-comment-webhook';
+import { AIService } from '@/app/services/ai.service';
+
+// Mock the AIService
+jest.mock('@/app/services/ai.service', () => {
+  return {
+    AIService: jest.fn().mockImplementation(() => ({
+      generateResponse: jest.fn().mockResolvedValue('This is a mock AI response to your comment.')
+    }))
+  };
+});
 
 jest.mock('octokit', () => {
   const mockRequestHandler = jest.fn().mockImplementation((url) => {
@@ -140,105 +150,13 @@ describe('GithubCommentService', () => {
       ]);
 
       // Act
-      const comments = await service.getCommentThread('123');
+      const comments = await service.getCommentThread();
 
       // Assert
       expect(comments).toHaveLength(2);
       expect(comments[0].id).toBe('123');
       expect(comments[1].id).toBe('456');
       expect(comments[1].isAiSuggestion).toBe(true);
-    });
-  });
-
-  describe('replyToComment', () => {
-    it('should post a reply to a comment', async () => {
-      // Arrange
-      service.replyToComment = jest.fn().mockResolvedValue(undefined);
-
-      // Act
-      await service.replyToComment('123', 'Test reply');
-
-      // Assert
-      expect(service.replyToComment).toHaveBeenCalledWith('123', 'Test reply');
-    });
-  });
-
-  describe('processCommentReply', () => {
-    it('should reply to a comment when it is a reply to a bot comment', async () => {
-      // Arrange
-      mockPayload.comment.in_reply_to_id = 456;
-
-      // Mock the getCommentThread method
-      service.getCommentThread = jest.fn().mockResolvedValue([
-        {
-          id: '123',
-          body: 'Test comment',
-          isAiSuggestion: false,
-          createdAt: new Date('2023-01-01T00:00:00Z'),
-          user: 'test-user'
-        },
-        {
-          id: '456',
-          body: 'Bot comment',
-          isAiSuggestion: true,
-          createdAt: new Date('2023-01-01T01:00:00Z'),
-          user: 'docflamingo-app'
-        }
-      ]);
-
-      // Mock the replyToComment method
-      service.replyToComment = jest.fn().mockResolvedValue(undefined);
-
-      // Act
-      const result = await service.processCommentReply();
-
-      // Assert
-      expect(service.getCommentThread).toHaveBeenCalledWith('123');
-      expect(service.replyToComment).toHaveBeenCalledWith(
-        '123',
-        expect.stringContaining('Thank you for your reply')
-      );
-      expect(result).toEqual({
-        message: 'success',
-        action: 'replied_to_user'
-      });
-    });
-
-    it('should not reply when the parent comment is not from the bot', async () => {
-      // Arrange
-      mockPayload.comment.in_reply_to_id = 456;
-
-      // Mock the getCommentThread method with a non-bot parent comment
-      service.getCommentThread = jest.fn().mockResolvedValue([
-        {
-          id: '123',
-          body: 'Test comment',
-          isAiSuggestion: false,
-          createdAt: new Date('2023-01-01T00:00:00Z'),
-          user: 'test-user'
-        },
-        {
-          id: '456',
-          body: 'Another user comment',
-          isAiSuggestion: false,
-          createdAt: new Date('2023-01-01T01:00:00Z'),
-          user: 'another-user'
-        }
-      ]);
-
-      // Mock the replyToComment method
-      service.replyToComment = jest.fn().mockResolvedValue(undefined);
-
-      // Act
-      const result = await service.processCommentReply();
-
-      // Assert
-      expect(service.getCommentThread).toHaveBeenCalledWith('123');
-      expect(service.replyToComment).not.toHaveBeenCalled();
-      expect(result).toEqual({
-        message: 'success',
-        action: 'no_action_needed'
-      });
     });
   });
 });

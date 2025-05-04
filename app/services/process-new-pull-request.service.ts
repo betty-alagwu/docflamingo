@@ -7,7 +7,7 @@ export class ProcessNewPullRequestService {
   const githubService = new GithubService(payload)
   await githubService.initialise();
 
-  await githubService.testLLMIntegration();
+  await githubService.analyzePullRequestWithLLM();
 
   const patchDiff = await githubService.getDiffFiles();
   return patchDiff;

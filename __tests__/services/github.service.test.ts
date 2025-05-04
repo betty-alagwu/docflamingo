@@ -324,7 +324,7 @@ describe("GithubService", () => {
     });
   });
 
-  describe("LLM Integration Testing", () => {
+  describe("Pull Request Analysis with LLM", () => {
     beforeEach(async () => {
       // Initialize the service before each test in this block
       await githubService.initialise();
@@ -345,7 +345,7 @@ describe("GithubService", () => {
       const getDiffFilesSpy = jest.spyOn(githubService, "getDiffFiles");
 
       // Act
-      await githubService.testLLMIntegration();
+      await githubService.analyzePullRequestWithLLM();
 
       // Assert
       expect(getDiffFilesSpy).toHaveBeenCalled();
@@ -371,7 +371,7 @@ describe("GithubService", () => {
       jest.spyOn(githubService, "getDiffFiles").mockResolvedValueOnce([testFile as FilePatchInfo]);
 
       // Act
-      await githubService.testLLMIntegration();
+      await githubService.analyzePullRequestWithLLM();
 
       // Assert
       expect(mockTokenHandler.processFiles).toHaveBeenCalledWith([
@@ -384,7 +384,7 @@ describe("GithubService", () => {
 
     it("should send processed files to the AI service for analysis with correct parameters", async () => {
       // Act
-      await githubService.testLLMIntegration();
+      await githubService.analyzePullRequestWithLLM();
 
       // Assert
       expect(mockAIService.analyzePullRequest).toHaveBeenCalledWith(
@@ -401,8 +401,8 @@ describe("GithubService", () => {
       jest.spyOn(githubService, "getDiffFiles").mockRejectedValueOnce(apiError);
 
       // Act & Assert
-      await expect(githubService.testLLMIntegration()).rejects.toThrow(
-        "LLM Integration Test Failed:Error: API rate limit exceeded"
+      await expect(githubService.analyzePullRequestWithLLM()).rejects.toThrow(
+        "Pull Request Analysis Failed:Error: API rate limit exceeded"
       );
     });
 
@@ -412,8 +412,8 @@ describe("GithubService", () => {
       mockAIService.analyzePullRequest.mockRejectedValueOnce(aiError);
 
       // Act & Assert
-      await expect(githubService.testLLMIntegration()).rejects.toThrow(
-        "LLM Integration Test Failed:Error: AI model unavailable"
+      await expect(githubService.analyzePullRequestWithLLM()).rejects.toThrow(
+        "Pull Request Analysis Failed:Error: AI model unavailable"
       );
     });
 
@@ -429,8 +429,8 @@ describe("GithubService", () => {
       ]);
 
       // Act & Assert
-      await expect(githubService.testLLMIntegration()).rejects.toThrow(
-        "LLM Integration Test Failed:Error: No files with patches found"
+      await expect(githubService.analyzePullRequestWithLLM()).rejects.toThrow(
+        "Pull Request Analysis Failed:Error: No files with patches found"
       );
     });
   });

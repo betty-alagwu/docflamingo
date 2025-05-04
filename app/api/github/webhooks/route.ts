@@ -7,26 +7,11 @@ const interestedPrEvents = ["closed", "opened", "edited", "reopened"];
 const interestedCommentEvents = ["created", "edited"];
 
 export async function POST(request: NextRequest) {
-  const githubEvent = request.headers.get('x-github-event');
+  const githubEvent = request.headers.get('X-GitHub-Event');
   const body = await request.json();
 
-  let eventType = "";
-
-  if (githubEvent === 'pull_request') {
-    eventType = "pull_request";
-  } else if (githubEvent === 'issue_comment') {
-    eventType = "issue_comment";
-  } else if (githubEvent === 'pull_request_review_comment') {
-    eventType = "pull_request_review_comment";
-  } else {
-    // Fallback to body-based detection
-    if (body.pull_request) eventType = "pull_request";
-    if (body.comment && body.issue) eventType = "issue_comment";
-  }
-
-
   try {
-    if (eventType === "pull_request") {
+    if (githubEvent === "pull_request") {
       if (!interestedPrEvents.includes(body.action)) {
         return NextResponse.json({ status: "ignored", reason: "Uninterested PR action" });
       }
@@ -55,19 +40,17 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ status: "success", event: "pull_request" });
       } catch (error) {
-        logger.error(`Error triggering PR webhook task: ${error}`);
         return NextResponse.json(
           { status: "error", message: `Error processing PR webhook: ${error}` },
           { status: 500 }
         );
       }
-    } else if (eventType === "issue_comment") {
+    } else if (githubEvent === "pull_request_review_comment") {
       if (!interestedCommentEvents.includes(body.action)) {
-        return NextResponse.json({ status: "ignored", reason: "Uninterested comment action" });
-      }
-
-      if (!body.issue || !body.issue.pull_request) {
-        return NextResponse.json({ status: "ignored", reason: "Not a PR comment" });
+        return NextResponse.json({
+          status: "ignored",
+          reason: `Uninterested comment action: ${body.action}`
+        });
       }
 
       try {
@@ -79,22 +62,37 @@ export async function POST(request: NextRequest) {
             user: {
               login: body.comment.user.login,
               id: body.comment.user.id,
+              type: body.comment.user.type,
             },
             created_at: body.comment.created_at,
             updated_at: body.comment.updated_at,
             in_reply_to_id: body.comment.in_reply_to_id || null,
             html_url: body.comment.html_url,
             url: body.comment.url,
+            path: body.comment.path,
+            position: body.comment.position,
+            line: body.comment.line,
+            side: body.comment.side,
+            commit_id: body.comment.commit_id,
+            pull_request_review_id: body.comment.pull_request_review_id,
+            diff_hunk: body.comment.diff_hunk,
+            original_position: body.comment.original_position,
+            start_line: body.comment.start_line,
+            original_line: body.comment.original_line,
+            subject_type: body.comment.subject_type,
+            performed_via_github_app: body.comment.performed_via_github_app,
           },
-          issue: {
-            number: body.issue.number,
-            title: body.issue.title,
-            body: body.issue.body,
+          pull_request: {
+            number: body.pull_request.number,
+            title: body.pull_request.title,
+            body: body.pull_request.body,
             user: {
-              login: body.issue.user.login,
-              id: body.issue.user.id,
+              login: body.pull_request.user.login,
+              id: body.pull_request.user.id,
             },
-            pull_request: body.issue.pull_request,
+            url: body.pull_request.url,
+            html_url: body.pull_request.html_url,
+            state: body.pull_request.state,
           },
           repository: {
             id: body.repository.id,
@@ -109,16 +107,14 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        return NextResponse.json({ status: "success", event: "issue_comment" });
+        return NextResponse.json({ status: "success", event: "pull_request_review_comment" });
       } catch (error) {
-        logger.error(`Error triggering comment webhook task: ${error}`);
         return NextResponse.json(
-          { status: "error", message: `Error processing comment webhook: ${error}` },
+          { status: "error", message: `Error processing PR review comment webhook: ${error}` },
           { status: 500 }
         );
       }
     }
-
     return NextResponse.json({ status: "ignored", reason: "Unhandled event type" });
   } catch (error) {
     logger.error(`Error processing webhook: ${error}`);

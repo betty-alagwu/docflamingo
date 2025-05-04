@@ -1,34 +1,59 @@
-/**
- * Interfaces for PR comment handling system
- */
-
-/**
- * Represents a comment in a GitHub PR
- */
 export interface Comment {
   id: string;
   body: string;
   isAiSuggestion: boolean;
   createdAt: Date;
   user: string;
-  inReplyToId?: string; // ID of the comment this is replying to
+  inReplyToId?: string;
+  path?: string;
+  position?: number;
+  line?: number;
+  side?: string;
+  commitId?: string;
+  diffHunk?: string;
+  originalPosition?: number;
+  startLine?: number | null;
+  originalLine?: number;
+  subjectType?: string;
 }
 
 /**
- * Context information for a conversation in a PR
+ * Interface for GitHub Pull Request Comment
  */
+export interface GithubPullRequestComment {
+  id: number;
+  body: string | null;
+  user?: {
+    login: string;
+    id: number;
+    type?: string;
+  };
+  created_at: string;
+  updated_at: string;
+  in_reply_to_id?: number;
+  path?: string;
+  position?: number;
+  line?: number;
+  side?: string;
+  commit_id?: string;
+  pull_request_review_id?: number | null;
+  diff_hunk?: string;
+  original_position?: number;
+  start_line?: number | null;
+  original_line?: number;
+  subject_type?: string;
+  [key: string]: any; // Allow additional properties
+}
+
 export interface CommentContext {
-  previousSuggestions: string[]; // Previous AI suggestions in the thread
-  fileContext: string; // Code context around the comment
-  commentThread: string[]; // All comments in the thread
-  pullRequestDiff: string; // The PR diff
-  fileName?: string; // The file being discussed
-  lineNumber?: number; // The line number being discussed
+  previousSuggestions: string[]; 
+  fileContext: string;
+  commentThread: string[];
+  pullRequestDiff: string;
+  fileName?: string;
+  lineNumber?: number;
 }
 
-/**
- * Interface for Git providers (e.g., GitHub)
- */
 export interface GitProvider {
   /**
    * Get the full thread of comments related to a specific comment
@@ -36,7 +61,7 @@ export interface GitProvider {
    * @returns Array of comments in the thread
    */
   getCommentThread(commentId: string): Promise<Comment[]>;
-  
+
   /**
    * Reply to a comment
    * @param owner Repository owner
@@ -86,18 +111,42 @@ export interface PRConversationHandler {
  */
 export interface CommentWebhookPayload {
   action: string;
+  changes?: {
+    body?: {
+      from: string;
+    };
+  };
   comment: {
     id: string;
     body: string;
     user: {
       login: string;
       id: number;
+      type?: string;
     };
     created_at: string;
     updated_at: string;
     in_reply_to_id?: string;
+    // Fields specific to PR review comments
+    path?: string;
+    position?: number;
+    line?: number;
+    side?: string;
+    commit_id?: string;
+    pull_request_review_id?: number;
+    diff_hunk?: string;
+    original_position?: number;
+    start_line?: number | null;
+    original_line?: number;
+    subject_type?: string;
+    performed_via_github_app?: {
+      id: number;
+      slug: string;
+      name: string;
+    };
   };
-  issue: {
+  // This can be either issue (for issue_comment events) or pull_request (for pull_request_review_comment events)
+  issue?: {
     number: number;
     title: string;
     body: string | null;
@@ -107,7 +156,23 @@ export interface CommentWebhookPayload {
     };
     pull_request?: {
       url: string;
+      html_url?: string;
+      diff_url?: string;
+      patch_url?: string;
+      merged_at?: string | null;
     };
+    state?: string;
+  };
+  pull_request?: {
+    number: number;
+    title: string;
+    body: string | null;
+    user: {
+      login: string;
+      id: number;
+    };
+    url: string;
+    html_url: string;
   };
   repository: {
     id: number;
@@ -115,6 +180,7 @@ export interface CommentWebhookPayload {
     owner: {
       login: string;
     };
+    full_name?: string;
   };
   installation: {
     id: number;

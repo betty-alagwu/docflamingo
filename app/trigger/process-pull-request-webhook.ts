@@ -36,7 +36,6 @@ export const processPullRequestWebhookTask = task({
       throw new Error("Installation with ID of " + payload.installation.id + " not found");
     }
 
-    // if the action is opened new pull request
     if (payload.action === "opened") {
       await new ProcessNewPullRequestService().run(payload);
     }

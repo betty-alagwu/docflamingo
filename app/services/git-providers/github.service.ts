@@ -35,6 +35,45 @@ export class GithubService {
     this.octokit = await this.app.getInstallationOctokit(this.payload.installation.id)
   }
 
+  public async analyzePullRequestWithLLM(): Promise<void> {
+    try {
+      const files = await this.getDiffFiles();
+      const owner = this.payload.repository.owner
+      const repo =  this.payload.repository.name;
+      const prNumber = this.payload.number;
+
+      // Get the system prompt to initialize the token handler
+      const systemPrompt = this.aiService.getSystemPrompt();
+      const tokenHandler = new TokenHandler(systemPrompt, 30000, {
+        OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: 3000,  // Higher value - more lenient threshold
+        OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: 2000   // Lower value - more restrictive threshold
+      });
+
+      const fileInfos: FileInfo[] = files
+        .filter(file => file.patch)
+        .map(file => ({
+          filename: file.filename,
+          patch: file.patch
+        }));
+
+      if (fileInfos.length === 0) {
+        throw new Error('No files with patches found');
+      }
+
+      const processedDiff = await tokenHandler.processFiles(fileInfos);
+
+      await this.aiService.analyzePullRequest(
+        processedDiff,
+        owner.login,
+        repo,
+        prNumber
+      );
+
+    } catch (error) {
+      throw new Error('Pull Request Analysis Failed:' + error);
+    }
+  }
+
   /**
    * Get the diff files for the pull request
    * @returns {Promise<FilePatchInfo[]>}
@@ -135,44 +174,5 @@ export class GithubService {
     })
 
     return response?.data.merge_base_commit.sha;
-  }
-
-  public async testLLMIntegration(): Promise<void> {
-    try {
-      const files = await this.getDiffFiles();
-      const owner = this.payload.repository.owner
-      const repo =  this.payload.repository.name;
-      const prNumber = this.payload.number;
-
-      // Get the system prompt to initialize the token handler
-      const systemPrompt = this.aiService.getSystemPrompt();
-      const tokenHandler = new TokenHandler(systemPrompt, 30000, {
-        OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: 3000,  // Higher value - more lenient threshold
-        OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: 2000   // Lower value - more restrictive threshold
-      });
-
-      const fileInfos: FileInfo[] = files
-        .filter(file => file.patch)
-        .map(file => ({
-          filename: file.filename,
-          patch: file.patch
-        }));
-
-      if (fileInfos.length === 0) {
-        throw new Error('No files with patches found');
-      }
-
-      const processedDiff = await tokenHandler.processFiles(fileInfos);
-
-      await this.aiService.analyzePullRequest(
-        processedDiff,
-        owner.login,
-        repo,
-        prNumber
-      );
-
-    } catch (error) {
-      throw new Error('LLM Integration Test Failed:' + error);
-    }
   }
 }

@@ -1,24 +1,46 @@
 import { task } from "@trigger.dev/sdk/v3";
-import { logger } from "@trigger.dev/sdk/v3";
 import { prisma } from "../database/prisma";
 import { GithubCommentService } from "../services/git-providers/github-comment.service";
+import { NextResponse } from "next/server";
 
 export interface ProcessCommentWebhookTaskPayload {
   action: "created" | "edited" | "deleted";
+  changes?: {
+    body?: {
+      from: string;
+    };
+  };
   comment: {
     id: number;
     body: string;
     user: {
       login: string;
       id: number;
+      type?: string;
     };
     created_at: string;
     updated_at: string;
     in_reply_to_id?: number;
     html_url?: string;
     url?: string;
+    path?: string;
+    position?: number;
+    line?: number;
+    side?: string;
+    commit_id?: string;
+    pull_request_review_id?: number;
+    diff_hunk?: string;
+    original_position?: number;
+    start_line?: number | null;
+    original_line?: number;
+    subject_type?: string;
+    performed_via_github_app?: {
+      id: number;
+      slug: string;
+      name: string;
+    };
   };
-  issue: {
+  issue?: {
     number: number;
     title: string;
     body: string | null;
@@ -30,6 +52,19 @@ export interface ProcessCommentWebhookTaskPayload {
       url: string;
       html_url?: string;
     };
+  };
+
+  pull_request?: {
+    number: number;
+    title: string;
+    body: string | null;
+    user: {
+      login: string;
+      id: number;
+    };
+    url: string;
+    html_url: string;
+    state?: string;
   };
   repository: {
     id: number;
@@ -63,72 +98,27 @@ export const processCommentWebhookTask = task({
         throw new Error(`Installation with ID of ${payload.installation.id} not found`);
       }
 
-      const isBotComment = await isCommentForBot(payload);
-
-      if (!isBotComment) {
-        return {
-          message: "ignored",
-          reason: "Comment not directed at bot"
-        };
-      }
-
       if (payload.action === "created") {
         const githubCommentService = new GithubCommentService(payload);
         await githubCommentService.initialize();
         const result = await githubCommentService.processGithubComment();
+
         return result;
       }
 
-      return {
-        message: "success",
-        action: "no_action_needed"
-      };
+      if (payload.action === "edited") {
+        // Handle edited comments
+      }
+
+      if (payload.action === "deleted") {
+        // Handle deleted comments
+      }
+
     } catch (error) {
-      logger.error(`Error processing comment: ${error}`);
-      return {
-        message: "error",
-        error: String(error)
-      };
+      return NextResponse.json(
+        { status: "error", message: `Error processing comment webhook: ${error}` },
+        { status: 500 }
+      );
     }
   },
 });
-
-async function isCommentForBot(payload: ProcessCommentWebhookTaskPayload): Promise<boolean> {
-  try {
-    if (BOT_USERNAMES.includes(payload.comment.user.login)) {
-      return false;
-    }
-
-    if (payload.comment.in_reply_to_id) {
-      logger.info(`Reply detected to comment ID: ${payload.comment.in_reply_to_id}`);
-      return true;
-    }
-
-    const commentBody = payload.comment.body.toLowerCase();
-    const botMentions = BOT_USERNAMES.some(name =>
-      commentBody.includes(`@${name.toLowerCase()}`)
-    );
-
-    if (botMentions) {
-      logger.info(`Bot was mentioned in comment`);
-      return true;
-    }
-
-    const triggerKeywords = ['help', 'explain', 'clarify', 'what do you mean', 'can you', 'please', 'thanks'];
-    const containsTriggerKeyword = triggerKeywords.some(keyword =>
-      commentBody.includes(keyword.toLowerCase())
-    );
-
-    if (containsTriggerKeyword) {
-      logger.info(`Comment contains trigger keyword`);
-      return true;
-    }
-
-    return false;
-  } catch (error) {
-    logger.error(`Error checking if comment is for bot: ${error}`);
-    return false;
-  }
-}
-
-export const BOT_USERNAMES = ['docflamingo-app', 'github-actions[bot]', 'docflamingo'];

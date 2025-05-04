@@ -1,11 +1,10 @@
-import { ProcessCommentWebhookTaskPayload } from "@/app/trigger/process-comment-webhook";
-import { ProcessPullRequestWebhookTaskPayload } from "@/app/trigger/process-pull-request-webhook";
-import { Comment } from "@/app/interfaces/comment-handler.interface";
-import { GitHubFileContent } from "@/app/interfaces/github-api.interface";
-import { isAiBot } from "@/app/utils/comment-utils";
-import { logger } from "@trigger.dev/sdk/v3";
 import { App } from "octokit";
-import { GithubService } from "./github.service";
+import { logger } from "@trigger.dev/sdk/v3";
+import { ProcessCommentWebhookTaskPayload } from "@/app/trigger/process-comment-webhook";
+import { Comment, GithubPullRequestComment } from "@/app/interfaces/comment-handler.interface";
+import { isAiBot } from "@/app/utils/comment-utils";
+import { AIService } from "../ai.service";
+import { NextResponse } from "next/server";
 
 export class GithubCommentService {
   protected app = new App({
@@ -14,111 +13,117 @@ export class GithubCommentService {
   });
 
   protected octokit!: Awaited<ReturnType<typeof this.app.getInstallationOctokit>>;
+  private aiService: AIService;
 
-  constructor(protected payload: ProcessCommentWebhookTaskPayload) {}
+  constructor(protected payload: ProcessCommentWebhookTaskPayload) {
+    this.aiService = new AIService();
+  }
 
   public async initialize(): Promise<void> {
     this.octokit = await this.app.getInstallationOctokit(this.payload.installation.id);
   }
 
-  public async processGithubComment(): Promise<{ message: string; action: string }> {
+  public async processGithubComment() {
     try {
       if (this.payload.comment.in_reply_to_id) {
         const commentThread = await this.getCommentThread();
 
-        if (commentThread.length === 0) {
-          return {
-            message: "success",
-            action: "no_comments_found",
-          };
-        }
-
-        const parentComment = commentThread.find(
-          (comment) => comment.id === this.payload.comment.in_reply_to_id?.toString()
-        );
-
-        if (parentComment && parentComment.isAiSuggestion) {
-          logger.info(`Found parent comment from AI bot: ${parentComment.id}`);
-
-          // In Phase 3, this will be replaced with AI-generated response
-          const response = `Thank you for your reply to our suggestion. We'll implement AI-generated responses in Phase 3.`;
-        } else {
-          logger.info(`Parent comment not found or not from AI bot`);
-        }
+        console.log(commentThread)
       }
-
-      return {
-        message: "success",
-        action: "no_action_needed",
-      };
     } catch (error) {
-      logger.error(`Error processing comment reply: ${error}`);
-      // Return an error status instead of throwing
-      return {
-        message: "error",
-        action: "processing_failed",
-      };
+      return NextResponse.json(
+        { status: "error", message: `Error processing comment reply: ${error}` },
+        { status: 500 }
+      );
     }
   }
 
   public async getCommentThread(): Promise<Comment[]> {
     try {
-      const prNumber = this.payload.issue.number;
-      
-      const { data: comments } = await this.octokit.request(
-        "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments",
-        {
-          owner: this.payload.repository.owner.login,
-          repo: this.payload.repository.name,
-          pull_number: prNumber,
-          headers: {
-            "X-GitHub-Api-Version": "2022-11-28",
-          },
+      if (!this.payload.pull_request) return [];
+
+      const owner = this.payload.repository.owner.login;
+      const repo = this.payload.repository.name;
+      const prNumber = this.payload.pull_request.number;
+
+      if (this.payload.comment.in_reply_to_id) {
+        const { data: allComments } = await this.octokit.request(
+          'GET /repos/{owner}/{repo}/pulls/{pull_number}/comments',
+          {
+            owner,
+            repo,
+            pull_number: prNumber
+          }
+        );
+
+        const threadComments = allComments.filter(
+          (comment) =>
+            comment.id === this.payload.comment.in_reply_to_id ||
+            comment.in_reply_to_id === this.payload.comment.in_reply_to_id 
+        );
+
+        logger.info(`Found ${threadComments.length} comments in this thread`);
+        const currentCommentInThread = threadComments.some((comment) => comment.id === this.payload.comment.id);
+
+        const mappedComments = threadComments.map((comment) => this.mapGithubComment(comment));
+
+        if (!currentCommentInThread) {
+          mappedComments.push(
+            this.mapGithubComment({
+              id: this.payload.comment.id,
+              body: this.payload.comment.body,
+              user: this.payload.comment.user,
+              created_at: this.payload.comment.created_at,
+              updated_at: this.payload.comment.updated_at,
+              in_reply_to_id: this.payload.comment.in_reply_to_id,
+              path: this.payload.comment.path,
+              position: this.payload.comment.position,
+              line: this.payload.comment.line,
+              side: this.payload.comment.side,
+              commit_id: this.payload.comment.commit_id,
+              pull_request_review_id: this.payload.comment.pull_request_review_id,
+              diff_hunk: this.payload.comment.diff_hunk,
+              original_position: this.payload.comment.original_position,
+              start_line: this.payload.comment.start_line,
+              original_line: this.payload.comment.original_line,
+              subject_type: this.payload.comment.subject_type,
+            })
+          );
         }
-      );
 
-
-      console.log(comments);
-
-      return [this.convertGitHubComment(comments)]
-    } catch (error: any) {
-      if (error.response && error.response.status) {
-        logger.error(`Status: ${error.response.status}, Message: ${error.response.data?.message}`);
+        return mappedComments;
       }
 
+      return [];
+    } catch (error) {
+      logger.error(`Error retrieving comment thread: ${error}`);
       return [];
     }
   }
 
-  private convertGitHubComment(comment: any): Comment {
-    try {
-      if (!comment || !comment.id) {
-        return {
-          id: "unknown",
-          body: "",
-          isAiSuggestion: false,
-          createdAt: new Date(),
-          user: "unknown",
-        };
-      }
-
-      return {
-        id: comment.id.toString(),
-        body: comment.body || "",
-        isAiSuggestion: comment.user && isAiBot(comment.user.login),
-        createdAt: new Date(comment.created_at || Date.now()),
-        user: comment.user ? comment.user.login : "unknown",
-        inReplyToId: comment.in_reply_to_id?.toString(),
-      };
-    } catch (error: any) {
-      logger.error(`Error converting GitHub comment: ${error}`);
-      return {
-        id: "error",
-        body: "",
-        isAiSuggestion: false,
-        createdAt: new Date(),
-        user: "unknown",
-      };
-    }
+  private mapGithubComment(comment: GithubPullRequestComment): Comment {
+    const commentId = comment.id.toString();
+    const inReplyToId = comment.in_reply_to_id?.toString() || undefined;
+    
+    const isBot = isAiBot(comment.user?.login || "");
+    
+    return {
+      id: commentId,
+      body: comment.body || "",
+      isAiSuggestion: isBot,
+      createdAt: new Date(comment.created_at),
+      user: comment.user?.login || "unknown",
+      inReplyToId: inReplyToId,
+      path: comment.path,
+      position: comment.position,
+      line: comment.line,
+      side: comment.side,
+      commitId: comment.commit_id,
+      diffHunk: comment.diff_hunk,
+      originalPosition: comment.original_position,
+      startLine: comment.start_line,
+      originalLine: comment.original_line,
+      subjectType: comment.subject_type,
+    };
   }
 }

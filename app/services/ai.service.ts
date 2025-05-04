@@ -70,10 +70,7 @@ export class AIService {
 
   private async authenticate(owner: string, repo: string) {
     const { data: installations } = await this.app.octokit.request("GET /app/installations");
-
-    // Validate the installations data
     const validatedInstallations = this.installationsSchema.parse(installations);
-
     const installation = validatedInstallations.find((inst) => inst.account?.login === owner);
 
     if (!installation) {
@@ -86,7 +83,6 @@ export class AIService {
   public async analyzePullRequest(patchDiff: string, owner: string, repo: string, prNumber: number) {
     try {
       await this.authenticate(owner, repo);
-
       const systemPrompt = this.generateSystemPrompt();
       const userPrompt = this.generateUserPrompt(patchDiff);
 
@@ -95,45 +91,36 @@ export class AIService {
         prompt: `${systemPrompt}\n\n${userPrompt}`,
       });
 
-      console.log(text, "texttexttext");
-
       if (text) {
         try {
           const parsedResponse = this.parseAIResponse(text);
-          logger.info(`AI response parsed successfully`);
-
           const review = parsedResponse.review;
           const allComments: FormattedComment[] = [];
 
           // Process code suggestions with their corresponding key issues
           if (review.codeSuggestions && review.codeSuggestions.length > 0) {
-          const keyIssuesMap = new Map<string, KeyIssue>();
+            const keyIssuesMap = new Map<string, KeyIssue>();
 
-          if (review.keyIssuesToReview && review.keyIssuesToReview.length > 0) {
-            review.keyIssuesToReview.forEach(issue => {
-              // Create a key using file path and line numbers
-              const key = `${issue.relevantFile}:${issue.startLine}`;
-              keyIssuesMap.set(key, issue);
-            });
+            if (review.keyIssuesToReview && review.keyIssuesToReview.length > 0) {
+              review.keyIssuesToReview.forEach((issue) => {
+                const key = `${issue.relevantFile}:${issue.startLine}`;
+                keyIssuesMap.set(key, issue);
+              });
+            }
+
+            const suggestionComments = this.formatCodeSuggestionsWithKeyIssues(review.codeSuggestions, keyIssuesMap);
+            allComments.push(...suggestionComments);
           }
 
-          const suggestionComments = this.formatCodeSuggestionsWithKeyIssues(
-            review.codeSuggestions,
-            keyIssuesMap
-          );
-          allComments.push(...suggestionComments);
-        }
-
-        // Post all comments to GitHub
-        if (allComments.length > 0) {
-          await this.postCommentToGitHub(owner, repo, prNumber, allComments);
-        }
+          // Post all comments to GitHub
+          if (allComments.length > 0) {
+            await this.postCommentToGitHub(owner, repo, prNumber, allComments);
+          }
         } catch (parseError) {
           logger.error(`Error processing AI response: ${parseError}`);
           throw new Error(`Error processing AI response: ${parseError}`);
         }
       }
-
     } catch (error) {
       throw new Error(`Error analyzing pull request: ${error}`);
     }
@@ -149,12 +136,10 @@ export class AIService {
       const suggestionKey = `${suggestion.relevantFile}:${suggestion.startLine}`;
       const keyIssue = keyIssuesMap.get(suggestionKey);
 
-      // Determine the issue header and content
-      let issueHeader = "Code Suggestion";
+      let issueHeader = "";
       let issueContent = suggestion.explanation;
 
       if (keyIssue) {
-        // Use the key issue's header and content if available
         issueHeader = keyIssue.issueHeader;
         issueContent = keyIssue.issueContent;
       }
@@ -203,10 +188,10 @@ ${originalCode ? `- ${originalCode}` : ""}
       const fileChanges = new Map<string, Set<number>>();
 
       for (const file of prFiles) {
-        if (!file.patch) continue
+        if (!file.patch) continue;
 
         const changedLines = new Set<number>();
-        const patchLines = file.patch.split('\n');
+        const patchLines = file.patch.split("\n");
         let currentLine = 0;
 
         const hunkHeaderMatch = file.patch.match(/@@ -\d+,\d+ \+(\d+),\d+ @@/);
@@ -214,9 +199,8 @@ ${originalCode ? `- ${originalCode}` : ""}
           currentLine = parseInt(hunkHeaderMatch[1], 10);
         }
 
-        // Process each line in the patch
         for (const line of patchLines) {
-          if (line.startsWith('@@')) {
+          if (line.startsWith("@@")) {
             const match = line.match(/@@ -\d+,\d+ \+(\d+),\d+ @@/);
             if (match) {
               currentLine = parseInt(match[1], 10);
@@ -224,12 +208,12 @@ ${originalCode ? `- ${originalCode}` : ""}
             continue;
           }
 
-          if (line.startsWith('+') && !line.startsWith('+++')) {
+          if (line.startsWith("+") && !line.startsWith("+++")) {
             changedLines.add(currentLine);
           }
 
           // Increment line number for all lines except removed lines
-          if (!line.startsWith('-') || line.startsWith('---')) {
+          if (!line.startsWith("-") || line.startsWith("---")) {
             currentLine++;
           }
         }
@@ -237,13 +221,12 @@ ${originalCode ? `- ${originalCode}` : ""}
         fileChanges.set(file.filename, changedLines);
       }
 
-      // Map comments to the closest changed lines
-      const mappedComments = reviewComments.map(comment => {
+      const mappedComments = reviewComments.map((comment) => {
         const changedLines = fileChanges.get(comment.path);
         if (!changedLines || changedLines.size === 0) {
           return {
             ...comment,
-            mappedLine: Number(comment.startLine)
+            mappedLine: Number(comment.startLine),
           };
         }
 
@@ -252,7 +235,7 @@ ${originalCode ? `- ${originalCode}` : ""}
         let closestLine = startLine;
         let minDistance = Number.MAX_SAFE_INTEGER;
 
-        Array.from(changedLines).forEach(line => {
+        Array.from(changedLines).forEach((line) => {
           const distance = Math.abs(line - startLine);
           if (distance < minDistance) {
             minDistance = distance;
@@ -262,17 +245,16 @@ ${originalCode ? `- ${originalCode}` : ""}
 
         return {
           ...comment,
-          mappedLine: closestLine
+          mappedLine: closestLine,
         };
       });
 
-      // First try to create a unified review with all comments
       try {
-        const comments = mappedComments.map(comment => ({
+        const comments = mappedComments.map((comment) => ({
           path: comment.path,
           line: comment.mappedLine,
           side: "RIGHT",
-          body: comment.body
+          body: comment.body,
         }));
 
         await this.octokit.rest.pulls.createReview({
@@ -280,15 +262,12 @@ ${originalCode ? `- ${originalCode}` : ""}
           repo,
           pull_number: prNumber,
           commit_id: commitId,
-          event: 'COMMENT',
-          comments: comments
+          event: "COMMENT",
+          comments: comments,
         });
-
       } catch (reviewError) {
         for (let index = 0; index < mappedComments.length; index++) {
           const comment = mappedComments[index];
-
-          logger.info(`Posting individual comment ${index + 1}/${mappedComments.length} for file ${comment.path}`);
 
           try {
             const commentBody = `**Comment for ${comment.path} line ${comment.mappedLine}**\n\n${comment.body}`;
@@ -312,23 +291,15 @@ ${originalCode ? `- ${originalCode}` : ""}
 
   private parseAIResponse(text: string): AIReviewResponse {
     try {
-      logger.info(`Cleaning AI response text for JSON parsing`);
       const jsonString = text.replace(/```json\n|```/g, "").trim();
-
-      logger.info(`Parsing JSON string (length: ${jsonString.length})`);
       const parsedJson = JSON.parse(jsonString) as AIReviewResponse;
 
-      // Validate the response structure
       if (!parsedJson.review) {
-        logger.error(`Invalid AI response: Missing 'review' property`);
         throw new Error(`Invalid AI response: Missing 'review' property`);
       }
 
-      logger.info(`Successfully parsed AI response JSON`);
       return parsedJson;
     } catch (error) {
-      logger.error(`Error parsing AI response: ${error}`);
-      logger.error(`AI response text (first 200 chars): ${text.substring(0, 200)}...`);
       throw new Error(`Failed to parse AI response: ${error}`);
     }
   }
