@@ -81,5 +81,3 @@ Go ahead and create a [pull request](https://github.com/clerk/clerk-nextjs-demo-
 You can discuss ideas, ask questions, and meet others from the community in our [Discord](https://clerk.com/discord).
 
 If you prefer, you can also find support through our [Twitter](https://twitter.com/ClerkDev), or you can [email](mailto:support@clerk.dev) us!
-
-something something
