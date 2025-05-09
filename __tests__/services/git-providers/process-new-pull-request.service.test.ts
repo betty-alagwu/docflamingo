@@ -1,9 +1,9 @@
-import { ProcessNewPullRequestService } from '../../app/services/process-new-pull-request.service';
-import { GithubService } from '../../app/services/git-providers/github.service';
+import { ProcessNewPullRequestService } from '@/app/services/process-new-pull-request.service';
+import { GithubService } from '@/app/services/git-providers/github.service';
 import { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
 
 // Mock the GithubService
-jest.mock('../../app/services/git-providers/github.service', () => {
+jest.mock('@/app/services/git-providers/github.service', () => {
   return {
     GithubService: jest.fn().mockImplementation(() => ({
       initialise: jest.fn().mockResolvedValue(undefined),
@@ -49,7 +49,7 @@ describe('ProcessNewPullRequestService', () => {
     await service.run(mockPayload);
 
     // Assert
-    const mockGithubService = require('../../app/services/git-providers/github.service').GithubService;
+    const mockGithubService = require('@/app/services/git-providers/github.service').GithubService;
     expect(mockGithubService).toHaveBeenCalledWith(mockPayload);
     
     const mockGithubServiceInstance = mockGithubService.mock.results[0].value;

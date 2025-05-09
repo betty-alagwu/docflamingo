@@ -62,25 +62,14 @@ export async function POST(request: NextRequest) {
             user: {
               login: body.comment.user.login,
               id: body.comment.user.id,
-              type: body.comment.user.type,
             },
             created_at: body.comment.created_at,
             updated_at: body.comment.updated_at,
             in_reply_to_id: body.comment.in_reply_to_id || null,
-            html_url: body.comment.html_url,
             url: body.comment.url,
             path: body.comment.path,
-            position: body.comment.position,
-            line: body.comment.line,
-            side: body.comment.side,
             commit_id: body.comment.commit_id,
             pull_request_review_id: body.comment.pull_request_review_id,
-            diff_hunk: body.comment.diff_hunk,
-            original_position: body.comment.original_position,
-            start_line: body.comment.start_line,
-            original_line: body.comment.original_line,
-            subject_type: body.comment.subject_type,
-            performed_via_github_app: body.comment.performed_via_github_app,
           },
           pull_request: {
             number: body.pull_request.number,
@@ -92,7 +81,6 @@ export async function POST(request: NextRequest) {
             },
             url: body.pull_request.url,
             html_url: body.pull_request.html_url,
-            state: body.pull_request.state,
           },
           repository: {
             id: body.repository.id,
@@ -100,7 +88,6 @@ export async function POST(request: NextRequest) {
             owner: {
               login: body.repository.owner.login,
             },
-            full_name: body.repository.full_name,
           },
           installation: {
             id: body.installation.id,

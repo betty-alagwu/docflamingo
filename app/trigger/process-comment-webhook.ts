@@ -5,11 +5,6 @@ import { NextResponse } from "next/server";
 
 export interface ProcessCommentWebhookTaskPayload {
   action: "created" | "edited" | "deleted";
-  changes?: {
-    body?: {
-      from: string;
-    };
-  };
   comment: {
     id: number;
     body: string;
@@ -24,34 +19,8 @@ export interface ProcessCommentWebhookTaskPayload {
     html_url?: string;
     url?: string;
     path?: string;
-    position?: number;
-    line?: number;
-    side?: string;
     commit_id?: string;
     pull_request_review_id?: number;
-    diff_hunk?: string;
-    original_position?: number;
-    start_line?: number | null;
-    original_line?: number;
-    subject_type?: string;
-    performed_via_github_app?: {
-      id: number;
-      slug: string;
-      name: string;
-    };
-  };
-  issue?: {
-    number: number;
-    title: string;
-    body: string | null;
-    user: {
-      login: string;
-      id: number;
-    };
-    pull_request?: {
-      url: string;
-      html_url?: string;
-    };
   };
 
   pull_request?: {
@@ -64,7 +33,6 @@ export interface ProcessCommentWebhookTaskPayload {
     };
     url: string;
     html_url: string;
-    state?: string;
   };
   repository: {
     id: number;
@@ -72,7 +40,6 @@ export interface ProcessCommentWebhookTaskPayload {
     owner: {
       login: string;
     };
-    full_name?: string;
   };
   installation: {
     id: number;
@@ -101,7 +68,7 @@ export const processCommentWebhookTask = task({
       if (payload.action === "created") {
         const githubCommentService = new GithubCommentService(payload);
         await githubCommentService.initialize();
-        const result = await githubCommentService.processGithubComment();
+        const result = await githubCommentService.processGithubUserReply();
 
         return result;
       }

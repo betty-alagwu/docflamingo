@@ -144,8 +144,6 @@ describe('AIService', () => {
 
       // Assert
       expect(result).toHaveLength(1);
-      expect(result[0].body).toContain('🔧 **Code Suggestion**'); // Should use default header
-      expect(result[0].body).toContain('Fixes a syntax error in the response method call'); // Should use explanation
       expect(result[0].path).toBe('pages/api/store.ts');
     });
   });

@@ -32,28 +32,3 @@ model Job {
 model Suggestion {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 }
-
-model Comment {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  githubCommentId   String   @unique
-  repositoryOwner   String
-  repositoryName    String
-  pullRequestNumber Int
-  body              String
-  user              String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  inReplyToId       String?
-  isAiSuggestion    Boolean  @default(false)
-
-  path              String?
-  position          Int?
-  line              Int?
-  side              String?
-  commitId          String?
-  diffHunk          String?
-  originalPosition  Int?
-  startLine         Int?
-  originalLine      Int?
-  subjectType       String?
-}

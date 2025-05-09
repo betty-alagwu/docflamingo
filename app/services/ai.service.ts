@@ -97,7 +97,6 @@ export class AIService {
           const review = parsedResponse.review;
           const allComments: FormattedComment[] = [];
 
-          // Process code suggestions with their corresponding key issues
           if (review.codeSuggestions && review.codeSuggestions.length > 0) {
             const keyIssuesMap = new Map<string, KeyIssue>();
 
@@ -112,7 +111,6 @@ export class AIService {
             allComments.push(...suggestionComments);
           }
 
-          // Post all comments to GitHub
           if (allComments.length > 0) {
             await this.postCommentToGitHub(owner, repo, prNumber, allComments);
           }
@@ -184,7 +182,6 @@ ${originalCode ? `- ${originalCode}` : ""}
         pull_number: prNumber,
       });
 
-      // Process each file to find the actual changed lines
       const fileChanges = new Map<string, Set<number>>();
 
       for (const file of prFiles) {
@@ -212,7 +209,6 @@ ${originalCode ? `- ${originalCode}` : ""}
             changedLines.add(currentLine);
           }
 
-          // Increment line number for all lines except removed lines
           if (!line.startsWith("-") || line.startsWith("---")) {
             currentLine++;
           }
@@ -364,5 +360,35 @@ Ensure the JSON output is well-formatted and includes all necessary fields as sp
  ${patchDiff}
 
  Provide a comprehensive review of these changes.`;
+  }
+
+  public async generateCommentResponse(prompt: string): Promise<string> {
+    try {
+      const systemPrompt = `system="""You are an AI assistant helping with code-related questions in a GitHub pull request.
+Your task is to provide helpful, accurate, and concise responses to user questions.
+Be friendly and professional in your responses.
+If you're unsure about something, acknowledge the limitations of your knowledge.
+
+IMPORTANT GUIDELINES:
+1. Keep your responses focused and to the point
+2. Provide a single, direct answer to the user's question
+3. Do not suggest additional questions or topics unless specifically asked
+4. Do not repeat information that has already been provided
+5. Do not include meta-commentary about your role or capabilities
+6. Avoid phrases like "Here's a response..." or "Here's what you could say..."
+7. Just answer the question directly without unnecessary preamble
+"""`;
+
+      const { text } = await generateText({
+        model: this.deepseek("deepseek-chat"),
+        prompt: `${systemPrompt}\n\n${prompt}`,
+        maxTokens: 1000, // Limit response length
+      });
+
+      return text;
+    } catch (error) {
+      logger.error(`Error generating comment response: ${error}`);
+      throw new Error(`Error generating comment response: ${error}`);
+    }
   }
 }

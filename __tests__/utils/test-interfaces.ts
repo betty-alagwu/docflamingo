@@ -88,6 +88,17 @@ export interface AIReviewResponse {
 }
 
 /**
+ * Key Issue Interface
+ */
+export interface KeyIssue {
+  relevantFile: string;
+  issueHeader: string;
+  issueContent: string;
+  startLine: string | number;
+  endLine: string | number;
+}
+
+/**
  * AI Service Private Interface
  */
 export interface AIServicePrivate {
