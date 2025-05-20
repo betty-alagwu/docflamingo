@@ -43,7 +43,8 @@ describe('processPatchLines', () => {
   // Test constants
   const SAMPLE_FILE = 'line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8';
   const SINGLE_HUNK_PATCH = '@@ -3,2 +3,3 @@\n line3\n-line4\n+modified line4\n+new line';
-  const MULTI_HUNK_PATCH = '@@ -2,2 +2,3 @@\n line2\n-line3\n+modified line3\n+new line\n@@ -6,2 +7,2 @@\n line6\n-line7\n+modified line7';
+  const MULTI_HUNK_PATCH =
+    '@@ -2,2 +2,3 @@\n line2\n-line3\n+modified line3\n+new line\n@@ -6,2 +7,2 @@\n line6\n-line7\n+modified line7';
 
   it('should extend a patch with requested context lines', () => {
     // Arrange
@@ -68,31 +69,34 @@ describe('processPatchLines', () => {
 
     // Verify the structure of the extended patch
     const lines = result.split('\n');
-    expect(lines.some(line => line.includes('line2') && line.startsWith(' '))).toBe(true);
-    expect(lines.some(line => line.includes('line5') && line.startsWith(' '))).toBe(true);
+    expect(lines.some((line) => line.includes('line2') && line.startsWith(' '))).toBe(true);
+    expect(lines.some((line) => line.includes('line5') && line.startsWith(' '))).toBe(true);
   });
 
   it('should respect MAX_EXTRA_LINES limit for safety', () => {
     // Arrange
     const originalFile = SAMPLE_FILE;
     const patch = SINGLE_HUNK_PATCH;
-    const excessiveLinesBefore = 20; 
-    const excessiveLinesAfter = 20; 
+    const excessiveLinesBefore = 20;
+    const excessiveLinesAfter = 20;
 
     // Act
-    const result = processPatchLines(patch, originalFile, excessiveLinesBefore, excessiveLinesAfter);
+    const result = processPatchLines(
+      patch,
+      originalFile,
+      excessiveLinesBefore,
+      excessiveLinesAfter
+    );
 
     // Assert
     // Count the number of context lines added
     const lines = result.split('\n');
-    const contextLinesBefore = lines.filter(line =>
-      line.startsWith(' ') &&
-      /line[12]/.test(line) 
+    const contextLinesBefore = lines.filter(
+      (line) => line.startsWith(' ') && /line[12]/.test(line)
     ).length;
 
-    const contextLinesAfter = lines.filter(line =>
-      line.startsWith(' ') &&
-      /line[5678]/.test(line) 
+    const contextLinesAfter = lines.filter(
+      (line) => line.startsWith(' ') && /line[5678]/.test(line)
     ).length;
 
     // Should be limited to MAX_EXTRA_LINES (10)
@@ -116,11 +120,11 @@ describe('processPatchLines', () => {
     // Assert
     // Should include context for the first hunk
     expect(result).toContain('line1');
-    expect(result).toContain('line4'); 
+    expect(result).toContain('line4');
 
     // Should include context for the second hunk
     expect(result).toContain('line5');
-    expect(result).toContain('line8'); 
+    expect(result).toContain('line8');
 
     // Should preserve both hunks' content
     expect(result).toContain('modified line3');
@@ -129,8 +133,8 @@ describe('processPatchLines', () => {
 
     // Verify the structure with multiple hunks
     const lines = result.split('\n');
-    const hunkHeaders = lines.filter(line => line.startsWith('@@'));
-    expect(hunkHeaders.length).toBe(2); 
+    const hunkHeaders = lines.filter((line) => line.startsWith('@@'));
+    expect(hunkHeaders.length).toBe(2);
   });
 
   it('should handle edge cases with no context lines requested', () => {
@@ -144,8 +148,8 @@ describe('processPatchLines', () => {
     // Assert
     // Should not include any additional context lines
     const lines = result.split('\n');
-    expect(lines.filter(line => line.includes('line2')).length).toBe(0);
-    expect(lines.filter(line => line.includes('line5')).length).toBe(0);
+    expect(lines.filter((line) => line.includes('line2')).length).toBe(0);
+    expect(lines.filter((line) => line.includes('line5')).length).toBe(0);
 
     // Should still include the original patch content
     expect(result).toContain('line3');
@@ -198,8 +202,8 @@ describe('extendPatch', () => {
 
     // Verify the structure of the extended patch
     const lines = result.split('\n');
-    expect(lines.some(line => line.includes('line1') && line.startsWith(' '))).toBe(true);
-    expect(lines.some(line => line.includes('line4') && line.startsWith(' '))).toBe(true);
+    expect(lines.some((line) => line.includes('line1') && line.startsWith(' '))).toBe(true);
+    expect(lines.some((line) => line.includes('line4') && line.startsWith(' '))).toBe(true);
   });
 
   it('should handle invalid base64 gracefully by returning the original patch', () => {

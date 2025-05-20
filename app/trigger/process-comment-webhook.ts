@@ -1,10 +1,11 @@
-import { task } from "@trigger.dev/sdk/v3";
-import { prisma } from "../database/prisma";
-import { GithubCommentService } from "../services/git-providers/github-comment.service";
-import { NextResponse } from "next/server";
+import { task } from '@trigger.dev/sdk/v3';
+import { NextResponse } from 'next/server';
+
+import { prisma } from '../database/prisma';
+import { GithubCommentService } from '../services/git-providers/github-comment.service';
 
 export interface ProcessCommentWebhookTaskPayload {
-  action: "created" | "edited" | "deleted";
+  action: 'created' | 'edited' | 'deleted';
   comment: {
     id: number;
     body: string;
@@ -52,7 +53,7 @@ export interface ProcessCommentWebhookTaskPayload {
 }
 
 export const processCommentWebhookTask = task({
-  id: "process-comment-webhook",
+  id: 'process-comment-webhook',
   async run(payload: ProcessCommentWebhookTaskPayload) {
     try {
       const installation = await prisma.installation.findFirst({
@@ -65,7 +66,7 @@ export const processCommentWebhookTask = task({
         throw new Error(`Installation with ID of ${payload.installation.id} not found`);
       }
 
-      if (payload.action === "created") {
+      if (payload.action === 'created') {
         const githubCommentService = new GithubCommentService(payload);
         await githubCommentService.initialize();
         const result = await githubCommentService.processGithubUserReply();
@@ -73,17 +74,16 @@ export const processCommentWebhookTask = task({
         return result;
       }
 
-      if (payload.action === "edited") {
+      if (payload.action === 'edited') {
         // Handle edited comments
       }
 
-      if (payload.action === "deleted") {
+      if (payload.action === 'deleted') {
         // Handle deleted comments
       }
-
     } catch (error) {
       return NextResponse.json(
-        { status: "error", message: `Error processing comment webhook: ${error}` },
+        { status: 'error', message: `Error processing comment webhook: ${error}` },
         { status: 500 }
       );
     }

@@ -5,7 +5,11 @@ describe('chunkArray', () => {
     // Arrange
     const array = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     const chunkSize = 3;
-    const expected = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+    const expected = [
+      [1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9],
+    ];
 
     // Act
     const result = chunkArray(array, chunkSize);
@@ -77,7 +81,10 @@ describe('chunkArray', () => {
     // Arrange
     const array = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
     const chunkSize = 2;
-    const expected = [[{ id: 1 }, { id: 2 }], [{ id: 3 }, { id: 4 }]];
+    const expected = [
+      [{ id: 1 }, { id: 2 }],
+      [{ id: 3 }, { id: 4 }],
+    ];
 
     // Act
     const result = chunkArray(array, chunkSize);
@@ -101,6 +108,6 @@ describe('chunkArray', () => {
     // Assert
     expect(result).toEqual(expected);
     expect(result.length).toBe(array.length);
-    expect(result.every(chunk => chunk.length === 1)).toBe(true);
+    expect(result.every((chunk) => chunk.length === 1)).toBe(true);
   });
 });

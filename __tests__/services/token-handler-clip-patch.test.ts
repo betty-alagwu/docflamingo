@@ -4,7 +4,7 @@ jest.mock('gpt-tokenizer', () => {
   return {
     encode: jest.fn((text: string) => {
       return Array.from({ length: Math.ceil(text.length / 4) });
-    })
+    }),
   };
 });
 
@@ -49,7 +49,8 @@ describe('TokenHandler.clipPatch', () => {
   it('should handle complex patches with multiple changes when token limit is very low', async () => {
     // Arrange
     const clipPatchMethod = getPrivateMethod(handler, 'clipPatch');
-    const complexPatch = '@@ -1,5 +1,7 @@\n line1\n-line2\n+modified line2\n+new line\n line3\n-line4\n+modified line4\n line5';
+    const complexPatch =
+      '@@ -1,5 +1,7 @@\n line1\n-line2\n+modified line2\n+new line\n line3\n-line4\n+modified line4\n line5';
     const veryLowTokenLimit = 10;
 
     // Act
@@ -67,7 +68,8 @@ describe('TokenHandler.clipPatch', () => {
   it('should prioritize added lines when token limit allows some content', async () => {
     // Arrange
     const clipPatchMethod = getPrivateMethod(handler, 'clipPatch');
-    const patch = '@@ -1,5 +1,6 @@\n line1\n-line2\n+modified line2\n line3\n line4\n+new line\n line5';
+    const patch =
+      '@@ -1,5 +1,6 @@\n line1\n-line2\n+modified line2\n line3\n line4\n+new line\n line5';
     const moderateTokenLimit = 100;
 
     // Act
@@ -119,7 +121,8 @@ describe('TokenHandler.clipPatch', () => {
   it('should handle different token limits appropriately', async () => {
     // Arrange
     const clipPatchMethod = getPrivateMethod(handler, 'clipPatch');
-    const patch = '@@ -1,5 +1,6 @@\n line1\n-line2\n+modified line2\n line3\n line4\n+new line\n line5';
+    const patch =
+      '@@ -1,5 +1,6 @@\n line1\n-line2\n+modified line2\n line3\n line4\n+new line\n line5';
 
     // Act & Assert
     // With very low limit, should only include header

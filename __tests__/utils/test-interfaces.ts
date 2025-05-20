@@ -1,4 +1,4 @@
-import { Octokit } from 'octokit';
+import type { Octokit } from 'octokit';
 
 /**
  * Octokit Mock Interface
@@ -42,11 +42,11 @@ export interface MockTokenHandler {
 export interface FilePatchInfo {
   filename: string;
   newContent: {
-    content: string
+    content: string;
   };
   originalContent: {
     content: string;
-  }
+  };
   patch?: string;
   status?: string;
   additions?: number;
@@ -102,7 +102,10 @@ export interface KeyIssue {
  * AI Service Private Interface
  */
 export interface AIServicePrivate {
-  formatCodeSuggestionsWithKeyIssues: (codeSuggestions: CodeSuggestion[], keyIssuesMap: Map<string, KeyIssue>) => FormattedComment[];
+  formatCodeSuggestionsWithKeyIssues: (
+    codeSuggestions: CodeSuggestion[],
+    keyIssuesMap: Map<string, KeyIssue>
+  ) => FormattedComment[];
   authenticate: (owner: string, repo: string) => Promise<void>;
   parseAIResponse: (text: string) => AIReviewResponse;
   octokit: Octokit;

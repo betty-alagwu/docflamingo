@@ -17,24 +17,10 @@ export interface Comment {
   subjectType?: string;
 }
 
-export interface GithubPullRequestComment {
-  id: number;
-  body: string | null;
-  user?: {
-    login: string;
-    id: number;
-  };
-  created_at: string;
-  updated_at: string;
-  in_reply_to_id?: number;
-  path?: string;
-  commit_id?: string;
-  pull_request_review_id?: number | null;
-  [key: string]: any;
-}
+export { type GitHubPullRequestComment as GithubPullRequestComment } from '@/app/schemas/github.schema';
 
 export interface CommentContext {
-  previousSuggestions: string[]; 
+  previousSuggestions: string[];
   fileContext: string;
   commentThread: string[];
   pullRequestDiff: string;

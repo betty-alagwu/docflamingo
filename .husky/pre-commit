@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run lint-staged (ESLint and Prettier)
+echo "Running lint-staged..."
+npx lint-staged
+
+# Run tests
+echo "Running tests..."
+npm test
