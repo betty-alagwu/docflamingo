@@ -2,9 +2,9 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 # Run lint-staged (ESLint and Prettier)
-echo "Running lint-staged..."
+echo "🔍 Running lint-staged (ESLint and Prettier)..."
 npx lint-staged
 
-# Run tests
-echo "Running tests..."
+# Run all tests
+echo "🧪 Running all tests..."
 npm test
