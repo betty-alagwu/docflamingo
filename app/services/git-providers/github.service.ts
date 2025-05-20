@@ -1,11 +1,11 @@
 import { ProcessPullRequestWebhookTaskPayload } from "@/app/trigger/process-pull-request-webhook";
 import { chunkArray } from "@/app/utils/chunk-array";
 import { extendPatch } from "@/app/utils/patch-processing";
-import { writeFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { App, type Octokit } from "octokit";
 import { AIService } from "../ai.service";
 import { FileInfo, TokenHandler } from "../token-handler.service";
+import { env } from "@/app/config/env";
 
 
 export interface FilePatchInfo {
@@ -21,8 +21,8 @@ export interface FilePatchInfo {
 
 export class GithubService {
   protected app = new App({
-    appId: process.env.GITHUB_APP_CLIENT_ID as string,
-    privateKey: process.env.GITHUB_APP_PRIVATE_KEY as string
+    appId: env.GITHUB_APP_CLIENT_ID,
+    privateKey: env.GITHUB_APP_PRIVATE_KEY
   })
 
   protected octokit!: Awaited<ReturnType<typeof this.app.getInstallationOctokit>>
@@ -42,7 +42,6 @@ export class GithubService {
       const repo =  this.payload.repository.name;
       const prNumber = this.payload.number;
 
-      // Get the system prompt to initialize the token handler
       const systemPrompt = this.aiService.getSystemPrompt();
       const tokenHandler = new TokenHandler(systemPrompt, 30000, {
         OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: 3000,  // Higher value - more lenient threshold

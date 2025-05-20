@@ -17,7 +17,7 @@ export class TokenHandler {
   private maxTokens: number;
   private config: TokenConfig;
 
-  constructor(systemPrompt: string, maxTokens: number = 4000, config?: Partial<TokenConfig>) {
+  constructor(systemPrompt: string, maxTokens: number = 1000, config?: Partial<TokenConfig>) {
     this.promptTokens = this.countTokens(systemPrompt);
     this.maxTokens = maxTokens;
     this.config = {
@@ -52,23 +52,17 @@ export class TokenHandler {
     for (const file of sortedFiles) {
       if (!file.patch) continue;
 
-      // Count tokens for this file's patch
       const patchWithHeader = this.formatPatchWithHeader(file);
       const patchTokens = this.countTokens(patchWithHeader);
 
-      // Always process at least one file, even if it exceeds the soft limit
       const isFirstFile = !processedAtLeastOneFile;
 
-      // Check if we're hitting hard token limit (stricter threshold)
-      // Hard threshold is lower than soft threshold (more restrictive)
       if (totalTokens > this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD && !isFirstFile) {
         remainingFiles.push(file.filename);
         continue;
       }
 
-      // Check if adding this patch would exceed soft token limit (more lenient threshold, higher value)
       if (totalTokens + patchTokens > this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD) {
-        // Try to clip the patch
         const availableTokens = this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD - totalTokens;
         const clippedPatch = await this.clipPatch(file.patch, availableTokens);
 
@@ -142,9 +136,7 @@ export class TokenHandler {
   private async clipPatch(patch: string, maxTokens: number): Promise<string> {
     const lines = patch.split('\n');
 
-    // If we have very few tokens available, just return the patch header
     if (maxTokens < 100 && lines.length > 0) {
-      // Find the first patch header line
       const headerIndex = lines.findIndex(line => line.startsWith('@@ '));
       if (headerIndex >= 0) {
         return lines[headerIndex] + '\n\n[Patch severely truncated due to token limit]';
@@ -152,11 +144,9 @@ export class TokenHandler {
       return '[Patch could not be included due to token limit]';
     }
 
-    // Prioritize added lines (starting with '+') as they're more important for review
     const addedLines: {line: string, index: number}[] = [];
     const contextLines: {line: string, index: number}[] = [];
 
-    // Separate added lines from context lines
     lines.forEach((line, index) => {
       if (line.startsWith('+') && !line.startsWith('+++')) {
         addedLines.push({line, index});
@@ -165,11 +155,9 @@ export class TokenHandler {
       }
     });
 
-    // Start with the patch header if it exists
     let clippedPatch = '';
     let currentTokens = 0;
 
-    // Find and add the patch header
     const headerIndex = lines.findIndex(line => line.startsWith('@@ '));
     if (headerIndex >= 0) {
       clippedPatch = lines[headerIndex] + '\n';
@@ -190,9 +178,7 @@ export class TokenHandler {
       }
     }
 
-    // Then add context lines if we have tokens left
     for (const {line, index} of contextLines) {
-      // Skip lines we've already included
       if (includedLineIndices.has(index)) continue;
 
       const lineTokens = this.countTokens(line + '\n');

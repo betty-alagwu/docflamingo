@@ -3,6 +3,7 @@ import { logger } from "@trigger.dev/sdk/v3";
 import { generateText } from "ai";
 import { App, Octokit } from "octokit";
 import { z } from "zod";
+import { env } from "@/app/config/env";
 
 interface CodeSuggestion {
   suggestedCode: string;
@@ -41,21 +42,13 @@ export class AIService {
   private octokit!: Octokit;
   private app;
   constructor() {
-    if (!process.env.DEEPSEEK_API_KEY) {
-      throw new Error("Missing DEEPSEEK_API_KEY environment variable");
-    }
-
-    if (!process.env.GITHUB_APP_CLIENT_ID || !process.env.GITHUB_APP_PRIVATE_KEY) {
-      throw new Error("Missing GitHub App credentials");
-    }
-
     this.deepseek = createDeepSeek({
-      apiKey: process.env.DEEPSEEK_API_KEY ?? "",
+      apiKey: env.DEEPSEEK_API_KEY,
     });
 
     this.app = new App({
-      appId: process.env.GITHUB_APP_CLIENT_ID as string,
-      privateKey: process.env.GITHUB_APP_PRIVATE_KEY as string,
+      appId: env.GITHUB_APP_CLIENT_ID,
+      privateKey: env.GITHUB_APP_PRIVATE_KEY,
     });
   }
 

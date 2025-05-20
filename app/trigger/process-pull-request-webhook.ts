@@ -1,6 +1,8 @@
 import { task } from "@trigger.dev/sdk/v3";
 import { prisma } from "../database/prisma";
 import { ProcessNewPullRequestService } from "../services/process-new-pull-request.service";
+import { ProcessClosedPullRequestService } from "../services/process-closed-pull-request.service";
+import { ProcessReopenedPullRequestService } from "../services/process-reopened-pull-request.service";
 
 export interface ProcessPullRequestWebhookTaskPayload {
   action: "closed" | "opened" | "reopened";
@@ -41,11 +43,11 @@ export const processPullRequestWebhookTask = task({
     }
 
     if (payload.action === "closed") {
-      // find the job associated with the pull request and mark it as done/closed
+      await new ProcessClosedPullRequestService().run(payload);
     }
 
     if (payload.action === "reopened") {
-      // find the job associated with the pull request and reopen it.
+      await new ProcessReopenedPullRequestService().run(payload);
     }
 
     return {

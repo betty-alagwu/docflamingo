@@ -6,11 +6,12 @@ import { isAiBot } from "@/app/utils/comment-utils";
 import { AIService } from "../ai.service";
 import { TokenHandler } from "../token-handler.service";
 import { NextResponse } from "next/server";
+import { env } from "@/app/config/env";
 
 export class GithubCommentService {
   protected app = new App({
-    appId: process.env.GITHUB_APP_CLIENT_ID as string,
-    privateKey: process.env.GITHUB_APP_PRIVATE_KEY as string,
+    appId: env.GITHUB_APP_CLIENT_ID,
+    privateKey: env.GITHUB_APP_PRIVATE_KEY,
   });
 
   protected octokit!: Awaited<ReturnType<typeof this.app.getInstallationOctokit>>;
@@ -18,7 +19,7 @@ export class GithubCommentService {
   private tokenHandler: TokenHandler;
 
   private readonly MAX_COMMENT_TOKENS = 3000; // Maximum tokens for comment processing
-  private readonly OUTPUT_BUFFER_TOKENS = 1000; // Buffer for AI response
+  private readonly OUTPUT_BUFFER_TOKENS = 1000;
 
   constructor(protected payload: ProcessCommentWebhookTaskPayload) {
     this.aiService = new AIService();
@@ -78,7 +79,7 @@ export class GithubCommentService {
             const responseTokens = this.tokenHandler.countTokens(aiResponse);
             const promptTokens = this.tokenHandler.countTokens(prompt);
             const totalTokens = promptTokens + responseTokens;
-            
+
             logger.info(`Total tokens for this interaction: ${totalTokens} (prompt: ${promptTokens}, response: ${responseTokens})`);
 
             await this.replyToComment(owner, repo, prNumber, this.payload.comment.id.toString(), aiResponse);

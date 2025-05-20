@@ -8,11 +8,17 @@ datasource db {
 }
 
 model Customer {
-  id                String @id @default(auto()) @map("_id") @db.ObjectId
-  clerkUserId       String @unique
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  clerkUserId       String        @unique
   githubAccessToken String
-
-  installations Installation[]
+  name              String?
+  email             String?
+  avatarUrl         String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  lastLoginAt       DateTime?
+  installations     Installation[]
+  jobs              Job[]
 }
 
 model Installation {
@@ -23,10 +29,28 @@ model Installation {
 }
 
 model Job {
-  id                  String @id @default(auto()) @map("_id") @db.ObjectId
-  customerId          String
-  githubRepositoryId  Int
-  githubPullRequestId Int
+  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+  customer               Customer  @relation(fields: [customerId], references: [id])
+  customerId             String    @db.ObjectId
+  githubRepositoryId     Int
+  githubRepositoryName   String
+  githubRepositoryOwner  String
+  githubPullRequestId    Int
+  githubPullRequestNumber Int
+  githubPullRequestTitle String?
+  status                 String    // "open", "closed", "merged"
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  closedAt               DateTime?
+  mergedAt               DateTime?
+  headSha                String
+  baseSha                String
+  reviewedFiles          String[]
+  triggerTaskIds         String[] 
+
+  @@index([githubRepositoryId, githubPullRequestId])
+  @@index([customerId, status])
+  @@index([createdAt])
 }
 
 model Suggestion {

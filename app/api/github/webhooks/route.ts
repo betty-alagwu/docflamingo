@@ -2,6 +2,7 @@ import { logger } from "@trigger.dev/sdk/v3";
 import { NextRequest, NextResponse } from "next/server";
 import { processPullRequestWebhookTask } from "@/app/trigger/process-pull-request-webhook";
 import { processCommentWebhookTask } from "@/app/trigger/process-comment-webhook";
+import { prisma } from "@/app/database/prisma";
 
 const interestedPrEvents = ["closed", "opened", "edited", "reopened"];
 const interestedCommentEvents = ["created", "edited"];
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        await processPullRequestWebhookTask.trigger({
+        const result = await processPullRequestWebhookTask.trigger({
           action: body.action,
           number: body.number,
           repository: {
@@ -38,6 +39,28 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        if (body.action !== "closed" && result && result.id) {
+          try {
+            const job = await prisma.job.findFirst({
+              where: {
+                githubRepositoryId: body.repository.id,
+                githubPullRequestId: body.number
+              }
+            });
+
+            if (job) {
+              await prisma.job.update({
+                where: { id: job.id },
+                data: {
+                  triggerTaskIds: [...(job.triggerTaskIds || []), result.id]
+                }
+              });
+            }
+          } catch (dbError) {
+            logger.error(`Error storing task ID: ${dbError}`);
+          }
+        }
+
         return NextResponse.json({ status: "success", event: "pull_request" });
       } catch (error) {
         return NextResponse.json(
@@ -54,7 +77,7 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        await processCommentWebhookTask.trigger({
+        const result = await processCommentWebhookTask.trigger({
           action: body.action,
           comment: {
             id: body.comment.id,
@@ -94,6 +117,29 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        if (result && result.id) {
+          try {
+            const job = await prisma.job.findFirst({
+              where: {
+                githubRepositoryId: body.repository.id,
+                githubPullRequestId: body.pull_request.number
+              }
+            });
+
+            if (job) {
+              await prisma.job.update({
+                where: { id: job.id },
+                data: {
+                  triggerTaskIds: [...(job.triggerTaskIds || []), result.id]
+                }
+              });
+              logger.info(`Stored comment task ID ${result.id} for PR #${body.pull_request.number}`);
+            }
+          } catch (dbError) {
+            logger.error(`Error storing comment task ID: ${dbError}`);
+          }
+        }
+
         return NextResponse.json({ status: "success", event: "pull_request_review_comment" });
       } catch (error) {
         return NextResponse.json(
@@ -104,7 +150,6 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ status: "ignored", reason: "Unhandled event type" });
   } catch (error) {
-    logger.error(`Error processing webhook: ${error}`);
     return NextResponse.json({ status: "error", message: `Error processing webhook: ${error}` }, { status: 500 });
   }
 }
