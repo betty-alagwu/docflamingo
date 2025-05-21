@@ -35,13 +35,13 @@ jobs:
         env:
           CI: true
           NODE_ENV: production
-          # Using placeholders for build environment
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_dummy_key_for_ci' }}
           GITHUB_APP_CLIENT_ID: placeholder
           GITHUB_APP_CLIENT_SECRET: placeholder
           GITHUB_APP_PRIVATE_KEY: placeholder
           DATABASE_URL: placeholder
           CLERK_SECRET_KEY: placeholder
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: placeholder
           DEEPSEEK_API_KEY: placeholder
           TRIGGER_SECRET_KEY: placeholder
 
@@ -110,7 +110,7 @@ jobs:
         run: npm install
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npx tsc --project tsconfig.ci.json
         env:
           CI: true
 
@@ -136,5 +136,3 @@ jobs:
         run: npm test -- --testPathPattern=services
         env:
           CI: true
-
-
