@@ -46,7 +46,7 @@ jobs:
           TRIGGER_SECRET_KEY: placeholder
 
   lint:
-    name: linting / lint
+    name: lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
