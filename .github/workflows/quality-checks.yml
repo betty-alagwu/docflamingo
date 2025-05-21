@@ -1,0 +1,332 @@
+name: Quality Checks and Deployment
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: ["*"]
+
+env:
+  NODE_VERSION: 18 # Default Node.js version
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+        env:
+          CI: true
+
+  format:
+    name: Prettier
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+        env:
+          CI: true
+
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+        env:
+          CI: true
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+      fail-fast: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        run: npm test -- --coverage
+        env:
+          CI: true
+
+      - name: Check coverage thresholds
+        run: |
+          COVERAGE_OUTPUT=$(npm test -- --coverage --coverageReporters="text-summary")
+          echo "$COVERAGE_OUTPUT"
+
+          # Check if coverage is below 80%
+          if echo "$COVERAGE_OUTPUT" | grep -q "Statements.*<.*80%\|Branches.*<.*80%\|Functions.*<.*80%\|Lines.*<.*80%"; then
+            echo "Code coverage is below the required threshold of 80%"
+            exit 1
+          fi
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          CI: true
+          NODE_ENV: production
+          GITHUB_APP_CLIENT_ID: placeholder
+          GITHUB_APP_CLIENT_SECRET: placeholder
+          GITHUB_APP_PRIVATE_KEY: placeholder
+          DATABASE_URL: placeholder
+          CLERK_SECRET_KEY: placeholder
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: placeholder
+          DEEPSEEK_API_KEY: placeholder
+          TRIGGER_SECRET_KEY: placeholder
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check licenses
+        run: npx license-checker --production --onlyAllow "MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause;CC0-1.0;0BSD;Unlicense" --excludePrivatePackages
+
+  status-check:
+    name: Quality Gate
+    needs: [lint, format, typecheck, unit-tests, build, security, license-check]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check if all jobs succeeded
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" || \
+                "${{ needs.format.result }}" != "success" || \
+                "${{ needs.typecheck.result }}" != "success" || \
+                "${{ needs.unit-tests.result }}" != "success" || \
+                "${{ needs.build.result }}" != "success" || \
+                "${{ needs.security.result }}" != "success" || \
+                "${{ needs.license-check.result }}" != "success" ]]; then
+            echo "One or more quality checks failed!"
+            exit 1
+          else
+            echo "All quality checks passed!"
+          fi
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [status-check]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.deployment-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          CI: true
+          NODE_ENV: production
+          GITHUB_APP_CLIENT_ID: ${{ secrets.GH_APP_CLIENT_ID }}
+          GITHUB_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
+          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          TRIGGER_SECRET_KEY: ${{ secrets.TRIGGER_SECRET_KEY }}
+
+      - name: Deploy to staging
+        id: deploy
+        # This is a placeholder until a real deployment method is setup
+        run: |
+          echo "Building and validating for staging environment..."
+          # Just verify the build is successful for now
+          echo "No actual deployment happening yet - domains not configured"
+
+          # Set a placeholder deployment URL that points to the GitHub Actions run
+          echo "deployment-url=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+
+          # When you're ready to deploy for real, uncomment and configure:
+          # For Vercel:
+          # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [status-check]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.deployment-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          CI: true
+          NODE_ENV: production
+          GITHUB_APP_CLIENT_ID: ${{ secrets.GH_APP_CLIENT_ID }}
+          GITHUB_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
+          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          TRIGGER_SECRET_KEY: ${{ secrets.TRIGGER_SECRET_KEY }}
+
+      - name: Deploy to production
+        id: deploy
+        # This is a placeholder until a real deployment method is setup
+        run: |
+          echo "Building and validating for production environment..."
+          # Just verify the build is successful for now
+          echo "No actual deployment happening yet - domains not configured"
+
+          # Set a placeholder deployment URL that points to the GitHub Actions run
+          echo "deployment-url=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+
+          # When you're ready to deploy for real, uncomment and configure:
+          # For Vercel:
+          # npx vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
