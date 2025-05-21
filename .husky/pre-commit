@@ -1,9 +1,5 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Run lint-staged (ESLint and Prettier)
-echo "🔍 Running lint-staged (ESLint and Prettier)..."
-npx lint-staged
+echo "� Running npm run fix to fix all linting and formatting issues..."
+npm run fix
 
 # Run all tests
 echo "🧪 Running all tests..."
