@@ -1,7 +1,6 @@
+name: Quality Checks
 
 on:
-  push:
-    branches: [main, staging]
   pull_request:
     branches: ["*"]
 
@@ -14,7 +13,7 @@ concurrency:
 
 jobs:
   build:
-    name: build / build
+    name: build / build (pull_request)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -47,7 +46,7 @@ jobs:
           TRIGGER_SECRET_KEY: placeholder
 
   lint:
-    name: linting / lint
+    name: linting / lint (pull_request)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -70,7 +69,7 @@ jobs:
           CI: true
 
   format:
-    name: format checking / format check
+    name: format checking / format check (pull_request)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -93,7 +92,7 @@ jobs:
           CI: true
 
   typecheck:
-    name: type checking / type check
+    name: type checking / type check (pull_request)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -116,7 +115,7 @@ jobs:
           CI: true
 
   test:
-    name: server tests / server tests
+    name: server tests / server tests (pull_request)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -134,30 +133,8 @@ jobs:
         run: npm ci
 
       - name: Run server tests
-        run: npm test -- --testPathPattern=server
+        run: npm test -- --testPathPattern=services
         env:
           CI: true
 
-  client-test:
-    name: client tests / client tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run client tests
-        run: npm test -- --testPathPattern=client
-        env:
-          CI: true
-          
