@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:ci": "NODE_OPTIONS=\"--max_old_space_size=4096\" NEXT_CONFIG_FILE=next.config.ci.js next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",

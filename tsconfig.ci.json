@@ -4,8 +4,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "exclude": [
-    "node_modules",
-    "app/page.tsx"  // Exclude the page with image imports during CI
-  ]
+  "exclude": ["node_modules", "app/page.tsx"]
 }
