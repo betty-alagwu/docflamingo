@@ -1,0 +1,19 @@
+name: 'Run Command'
+description: 'Run a command with optional name'
+
+inputs:
+  name:
+    description: 'Name of the command being run'
+    required: true
+  command:
+    description: 'Command to run'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: ${{ inputs.name }}
+      run: ${{ inputs.command }}
+      shell: bash
+      env:
+        CI: true
