@@ -20,7 +20,7 @@ jobs:
 
       - uses: ./.github/actions/setup-docker
 
-      - uses: ./.github/actions/run-command
-        with:
-          name: run server tests with coverage
-          command: npm run test:coverage -- --testPathPattern=services
+      - name: run server tests with coverage
+        run: npm run test:coverage -- --testPathPattern=services
+        env:
+          CI: true
