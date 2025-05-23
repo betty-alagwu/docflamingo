@@ -1,9 +1,12 @@
-import { ProcessPullRequestWebhookTaskPayload } from "@/app/trigger/process-pull-request-webhook";
-import { logger, runs, configure } from "@trigger.dev/sdk/v3";
-import { prisma } from "../database/prisma";
-import { App } from "octokit";
-import dayjs from "dayjs";
-import { env } from "@/app/config/env";
+import { logger, runs, configure } from '@trigger.dev/sdk/v3';
+import dayjs from 'dayjs';
+import { App } from 'octokit';
+
+import { env } from '@/app/config/env';
+
+import { prisma } from '../database/prisma';
+
+import type { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
 
 /**
  * Service to handle processing of closed pull requests
@@ -24,13 +27,13 @@ export class ProcessClosedPullRequestService {
       await this.cleanupResources(payload);
 
       return {
-        status: "closed",
+        status: 'closed',
         prNumber: payload.number,
         wasMerged,
         repository: {
           owner: payload.repository.owner.login,
-          name: payload.repository.name
-        }
+          name: payload.repository.name,
+        },
       };
     } catch (error) {
       logger.error(`Error processing closed PR: ${error}`);
@@ -47,11 +50,13 @@ export class ProcessClosedPullRequestService {
       installation_id: payload.installation.id,
       head_sha: payload.head.sha,
       base_sha: payload.base.sha,
-      action: payload.action
+      action: payload.action,
     });
   }
 
-  private async checkIfPrWasMerged(payload: ProcessPullRequestWebhookTaskPayload): Promise<boolean> {
+  private async checkIfPrWasMerged(
+    payload: ProcessPullRequestWebhookTaskPayload
+  ): Promise<boolean> {
     try {
       const app = new App({
         appId: env.GITHUB_APP_CLIENT_ID,
@@ -63,7 +68,7 @@ export class ProcessClosedPullRequestService {
       const { data: pullRequest } = await octokit.rest.pulls.get({
         owner: payload.repository.owner.login,
         repo: payload.repository.name,
-        pull_number: payload.number
+        pull_number: payload.number,
       });
 
       const wasMerged = pullRequest.merged === true;
@@ -80,8 +85,8 @@ export class ProcessClosedPullRequestService {
       const job = await prisma.job.findFirst({
         where: {
           githubRepositoryId: payload.repository.id,
-          githubPullRequestId: payload.number
-        }
+          githubPullRequestId: payload.number,
+        },
       });
 
       if (!job || !job.triggerTaskIds || job.triggerTaskIds.length === 0) {
@@ -104,8 +109,8 @@ export class ProcessClosedPullRequestService {
       await prisma.job.update({
         where: { id: job.id },
         data: {
-          triggerTaskIds: []
-        }
+          triggerTaskIds: [],
+        },
       });
     } catch (error) {
       logger.error(`Error canceling pending tasks: ${error}`);
@@ -117,8 +122,8 @@ export class ProcessClosedPullRequestService {
       const job = await prisma.job.findFirst({
         where: {
           githubRepositoryId: payload.repository.id,
-          githubPullRequestId: payload.number
-        }
+          githubPullRequestId: payload.number,
+        },
       });
 
       if (job) {
@@ -127,10 +132,10 @@ export class ProcessClosedPullRequestService {
         await prisma.job.update({
           where: { id: job.id },
           data: {
-            status: wasMerged ? "merged" : "closed",
+            status: wasMerged ? 'merged' : 'closed',
             closedAt: dayjs().toDate(),
-            mergedAt: wasMerged ? dayjs().toDate() : null
-          }
+            mergedAt: wasMerged ? dayjs().toDate() : null,
+          },
         });
       } else {
         logger.info(`No job record found for PR #${payload.number}`);

@@ -1,20 +1,23 @@
-import { logger } from "@trigger.dev/sdk/v3";
-import { NextRequest, NextResponse } from "next/server";
-import { processPullRequestWebhookTask } from "@/app/trigger/process-pull-request-webhook";
-import { processCommentWebhookTask } from "@/app/trigger/process-comment-webhook";
-import { prisma } from "@/app/database/prisma";
+import { logger } from '@trigger.dev/sdk/v3';
+import { NextResponse } from 'next/server';
 
-const interestedPrEvents = ["closed", "opened", "edited", "reopened"];
-const interestedCommentEvents = ["created", "edited"];
+import { prisma } from '@/app/database/prisma';
+import { processCommentWebhookTask } from '@/app/trigger/process-comment-webhook';
+import { processPullRequestWebhookTask } from '@/app/trigger/process-pull-request-webhook';
+
+import type { NextRequest } from 'next/server';
+
+const interestedPrEvents = ['closed', 'opened', 'edited', 'reopened'];
+const interestedCommentEvents = ['created', 'edited'];
 
 export async function POST(request: NextRequest) {
   const githubEvent = request.headers.get('X-GitHub-Event');
   const body = await request.json();
 
   try {
-    if (githubEvent === "pull_request") {
+    if (githubEvent === 'pull_request') {
       if (!interestedPrEvents.includes(body.action)) {
-        return NextResponse.json({ status: "ignored", reason: "Uninterested PR action" });
+        return NextResponse.json({ status: 'ignored', reason: 'Uninterested PR action' });
       }
 
       try {
@@ -39,21 +42,21 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        if (body.action !== "closed" && result && result.id) {
+        if (body.action !== 'closed' && result && result.id) {
           try {
             const job = await prisma.job.findFirst({
               where: {
                 githubRepositoryId: body.repository.id,
-                githubPullRequestId: body.number
-              }
+                githubPullRequestId: body.number,
+              },
             });
 
             if (job) {
               await prisma.job.update({
                 where: { id: job.id },
                 data: {
-                  triggerTaskIds: [...(job.triggerTaskIds || []), result.id]
-                }
+                  triggerTaskIds: [...(job.triggerTaskIds || []), result.id],
+                },
               });
             }
           } catch (dbError) {
@@ -61,18 +64,18 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        return NextResponse.json({ status: "success", event: "pull_request" });
+        return NextResponse.json({ status: 'success', event: 'pull_request' });
       } catch (error) {
         return NextResponse.json(
-          { status: "error", message: `Error processing PR webhook: ${error}` },
+          { status: 'error', message: `Error processing PR webhook: ${error}` },
           { status: 500 }
         );
       }
-    } else if (githubEvent === "pull_request_review_comment") {
+    } else if (githubEvent === 'pull_request_review_comment') {
       if (!interestedCommentEvents.includes(body.action)) {
         return NextResponse.json({
-          status: "ignored",
-          reason: `Uninterested comment action: ${body.action}`
+          status: 'ignored',
+          reason: `Uninterested comment action: ${body.action}`,
         });
       }
 
@@ -122,34 +125,39 @@ export async function POST(request: NextRequest) {
             const job = await prisma.job.findFirst({
               where: {
                 githubRepositoryId: body.repository.id,
-                githubPullRequestId: body.pull_request.number
-              }
+                githubPullRequestId: body.pull_request.number,
+              },
             });
 
             if (job) {
               await prisma.job.update({
                 where: { id: job.id },
                 data: {
-                  triggerTaskIds: [...(job.triggerTaskIds || []), result.id]
-                }
+                  triggerTaskIds: [...(job.triggerTaskIds || []), result.id],
+                },
               });
-              logger.info(`Stored comment task ID ${result.id} for PR #${body.pull_request.number}`);
+              logger.info(
+                `Stored comment task ID ${result.id} for PR #${body.pull_request.number}`
+              );
             }
           } catch (dbError) {
             logger.error(`Error storing comment task ID: ${dbError}`);
           }
         }
 
-        return NextResponse.json({ status: "success", event: "pull_request_review_comment" });
+        return NextResponse.json({ status: 'success', event: 'pull_request_review_comment' });
       } catch (error) {
         return NextResponse.json(
-          { status: "error", message: `Error processing PR review comment webhook: ${error}` },
+          { status: 'error', message: `Error processing PR review comment webhook: ${error}` },
           { status: 500 }
         );
       }
     }
-    return NextResponse.json({ status: "ignored", reason: "Unhandled event type" });
+    return NextResponse.json({ status: 'ignored', reason: 'Unhandled event type' });
   } catch (error) {
-    return NextResponse.json({ status: "error", message: `Error processing webhook: ${error}` }, { status: 500 });
+    return NextResponse.json(
+      { status: 'error', message: `Error processing webhook: ${error}` },
+      { status: 500 }
+    );
   }
 }

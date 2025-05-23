@@ -4,18 +4,18 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.test.ts'],
   moduleNameMapper: {
     '^@/app/(.*)$': '<rootDir>/app/$1',
+    '^@/__tests__/(.*)$': '<rootDir>/__tests__/$1',
   },
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.json',
-    }],
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.json',
+      },
+    ],
   },
-  setupFilesAfterEnv: [],
-  collectCoverageFrom: [
-    'app/**/*.{ts,tsx}',
-    '!app/**/*.d.ts',
-    '!app/**/_*.{ts,tsx}',
-  ],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  collectCoverageFrom: ['app/**/*.{ts,tsx}', '!app/**/*.d.ts', '!app/**/_*.{ts,tsx}'],
   coverageThreshold: {
     global: {
       branches: 70,
