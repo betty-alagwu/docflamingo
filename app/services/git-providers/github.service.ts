@@ -1,58 +1,62 @@
-import { ProcessPullRequestWebhookTaskPayload } from "@/app/trigger/process-pull-request-webhook";
-import { chunkArray } from "@/app/utils/chunk-array";
-import { extendPatch } from "@/app/utils/patch-processing";
-import { setTimeout } from "node:timers/promises";
-import { App, type Octokit } from "octokit";
-import { AIService } from "../ai.service";
-import { FileInfo, TokenHandler } from "../token-handler.service";
-import { env } from "@/app/config/env";
+import { setTimeout } from 'node:timers/promises';
 
+import { App } from 'octokit';
+
+import { env } from '@/app/config/env';
+import { chunkArray } from '@/app/utils/chunk-array';
+import { extendPatch } from '@/app/utils/patch-processing';
+
+import { AIService } from '../ai.service';
+import { TokenHandler } from '../token-handler.service';
+
+import type { FileInfo } from '../token-handler.service';
+import type { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
 
 export interface FilePatchInfo {
   filename: string;
   newContent: {
-    content: string
+    content: string;
   };
   originalContent: {
     content: string;
-  }
+  };
   patch?: string;
 }
 
 export class GithubService {
   protected app = new App({
     appId: env.GITHUB_APP_CLIENT_ID,
-    privateKey: env.GITHUB_APP_PRIVATE_KEY
-  })
+    privateKey: env.GITHUB_APP_PRIVATE_KEY,
+  });
 
-  protected octokit!: Awaited<ReturnType<typeof this.app.getInstallationOctokit>>
+  protected octokit!: Awaited<ReturnType<typeof this.app.getInstallationOctokit>>;
   private aiService: AIService;
 
   constructor(protected payload: ProcessPullRequestWebhookTaskPayload) {
     this.aiService = new AIService();
   }
   public async initialise() {
-    this.octokit = await this.app.getInstallationOctokit(this.payload.installation.id)
+    this.octokit = await this.app.getInstallationOctokit(this.payload.installation.id);
   }
 
   public async analyzePullRequestWithLLM(): Promise<void> {
     try {
       const files = await this.getDiffFiles();
-      const owner = this.payload.repository.owner
-      const repo =  this.payload.repository.name;
+      const owner = this.payload.repository.owner;
+      const repo = this.payload.repository.name;
       const prNumber = this.payload.number;
 
       const systemPrompt = this.aiService.getSystemPrompt();
       const tokenHandler = new TokenHandler(systemPrompt, 30000, {
-        OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: 3000,  // Higher value - more lenient threshold
-        OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: 2000   // Lower value - more restrictive threshold
+        OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: 3000, // Higher value - more lenient threshold
+        OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: 2000, // Lower value - more restrictive threshold
       });
 
       const fileInfos: FileInfo[] = files
-        .filter(file => file.patch)
-        .map(file => ({
+        .filter((file) => file.patch)
+        .map((file) => ({
           filename: file.filename,
-          patch: file.patch
+          patch: file.patch,
         }));
 
       if (fileInfos.length === 0) {
@@ -61,13 +65,7 @@ export class GithubService {
 
       const processedDiff = await tokenHandler.processFiles(fileInfos);
 
-      await this.aiService.analyzePullRequest(
-        processedDiff,
-        owner.login,
-        repo,
-        prNumber
-      );
-
+      await this.aiService.analyzePullRequest(processedDiff, owner.login, repo, prNumber);
     } catch (error) {
       throw new Error('Pull Request Analysis Failed:' + error);
     }
@@ -78,77 +76,92 @@ export class GithubService {
    * @returns {Promise<FilePatchInfo[]>}
    */
   public async getDiffFiles(): Promise<FilePatchInfo[]> {
-    const mergeCommitSha = await this.getMergeBaseCommit()
+    const mergeCommitSha = await this.getMergeBaseCommit();
 
-    const pullRequestFiles = await this.octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}/files', {
-      owner: this.payload.repository.owner.login,
-      repo: this.payload.repository.name,
-      pull_number: this.payload.number
-    });
+    const pullRequestFiles = await this.octokit.request(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}/files',
+      {
+        owner: this.payload.repository.owner.login,
+        repo: this.payload.repository.name,
+        pull_number: this.payload.number,
+      }
+    );
 
-    const pullRequestFilesChunks = chunkArray(pullRequestFiles.data, 5)
+    const pullRequestFilesChunks = chunkArray(pullRequestFiles.data, 5);
 
-    const filesPatchInfo: FilePatchInfo[] = []
+    const filesPatchInfo: FilePatchInfo[] = [];
     const patchExtraLinesBefore = 3;
     const patchExtraLinesAfter = 3;
 
     for (const chunk of pullRequestFilesChunks) {
-      const results = await Promise.allSettled(chunk.map(async (file) => {
-        const newContent = await this.getFileContent(this.payload.head.sha, file.filename)
+      const results = await Promise.allSettled(
+        chunk.map(async (file) => {
+          const newContent = await this.getFileContent(this.payload.head.sha, file.filename);
 
-        let originalContent = { content: '' }
+          let originalContent = { content: '' };
 
-        if (file.status !== 'added' && file.status !== 'removed') {
-          originalContent = await this.getFileContent(mergeCommitSha, file.filename)
-        }
+          if (file.status !== 'added' && file.status !== 'removed') {
+            originalContent = await this.getFileContent(mergeCommitSha, file.filename);
+          }
 
-        let num_plus_lines
-        let num_minus_lines
+          let num_plus_lines;
+          let num_minus_lines;
 
-        // count number of lines added and removed
-        if (file.hasOwnProperty('additions') && file.hasOwnProperty('deletions')) {
-          num_plus_lines = file.additions
-          num_minus_lines = file.deletions
-        } else {
-          num_plus_lines = file.patch
-            ? file.patch.split('\n').filter(line => line.startsWith('+')).length
-            : 0;
+          // count number of lines added and removed
+          if (
+            Object.prototype.hasOwnProperty.call(file, 'additions') &&
+            Object.prototype.hasOwnProperty.call(file, 'deletions')
+          ) {
+            num_plus_lines = file.additions;
+            num_minus_lines = file.deletions;
+          } else {
+            num_plus_lines = file.patch
+              ? file.patch.split('\n').filter((line) => line.startsWith('+')).length
+              : 0;
 
-          num_minus_lines = file.patch
-            ? file.patch.split('\n').filter(line => line.startsWith('-')).length
-            : 0;
-        }
+            num_minus_lines = file.patch
+              ? file.patch.split('\n').filter((line) => line.startsWith('-')).length
+              : 0;
+          }
 
-        // If a patch exists, extend it using the original file content.
-        if (file.patch) {
-          file.patch = extendPatch(
-            originalContent.content,
-            file.patch,
-            patchExtraLinesBefore,
-            patchExtraLinesAfter,
-            file.filename
-          );
-        }
+          // If a patch exists, extend it using the original file content.
+          if (file.patch) {
+            file.patch = extendPatch(
+              originalContent.content,
+              file.patch,
+              patchExtraLinesBefore,
+              patchExtraLinesAfter,
+              file.filename
+            );
+          }
 
-        return {
-          ...file,
-          newContent,
-          originalContent,
-          num_plus_lines,
-          num_minus_lines,
-        }
-      }))
+          return {
+            ...file,
+            newContent,
+            originalContent,
+            num_plus_lines,
+            num_minus_lines,
+          };
+        })
+      );
 
-      const allSuccessfulFiles = results.filter(promise => promise.status === 'fulfilled').map(promise => promise.value)
-      // TODO: Handle rejected promises
-      const _allFailedFiles = results.filter(promise => promise.status === 'rejected')
+      const allSuccessfulFiles = results
+        .filter((promise) => promise.status === 'fulfilled')
+        .map((promise) => promise.value);
 
-      filesPatchInfo.push(...allSuccessfulFiles)
+      // Log the count of failed files for now
+      // TODO: Implement proper error handling for failed file processing
+      const failedFilesCount = results.filter((promise) => promise.status === 'rejected').length;
+      if (failedFilesCount > 0) {
+        console.warn(`Failed to process ${failedFilesCount} files`);
+      }
+
+      filesPatchInfo.push(...allSuccessfulFiles);
 
       await setTimeout(100);
     }
 
-    return filesPatchInfo
+    return filesPatchInfo;
   }
 
   protected async getFileContent(ref: string, path: string) {
@@ -156,10 +169,10 @@ export class GithubService {
       owner: this.payload.repository.owner.login,
       repo: this.payload.repository.name,
       path,
-      ref
+      ref,
     });
 
-    return content.data as { content: string }
+    return content.data as { content: string };
   }
 
   protected async getMergeBaseCommit() {
@@ -168,9 +181,9 @@ export class GithubService {
       repo: this.payload.repository.name,
       basehead: `${this.payload.base.sha}...${this.payload.head.sha}`,
       headers: {
-        'X-GitHub-Api-Version': '2022-11-28'
-      }
-    })
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
 
     return response?.data.merge_base_commit.sha;
   }

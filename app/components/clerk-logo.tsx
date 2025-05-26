@@ -1,6 +1,6 @@
 export function ClerkLogo() {
   return (
-    <a href="https://clerk.com/docs" target="_blank">
+    <a href="https://clerk.com/docs" target="_blank" rel="noreferrer">
       <svg
         width="24"
         height="24"

@@ -1,6 +1,7 @@
-"use client";
+'use client';
 
-import { useOrganization, useSession, useUser } from "@clerk/nextjs";
+import { useOrganization, useSession, useUser } from '@clerk/nextjs';
+import Image from 'next/image';
 
 function Row({
   desc,
@@ -29,29 +30,27 @@ function PointerC({ label }: { label: string }) {
         <div className="h-px bg-[#BFBFC4] w-[6.5rem]" />
         <div className="size-1 bg-[#BFBFC4] rotate-45 absolute right-0 top-1/2 -translate-y-1/2" />
       </div>
-      <div className="font-mono text-xs bg-black px-1.5 py-1 rounded-md text-white">
-        {label}
-      </div>
+      <div className="font-mono text-xs bg-black px-1.5 py-1 rounded-md text-white">{label}</div>
     </div>
   );
 }
 
 function formatDate(date: Date) {
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
 }
 
 function formatDateWithNumbers(date: Date): string {
-  return date.toLocaleString("en-US", {
-    month: "numeric",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
+  return date.toLocaleString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
     hour12: true,
   });
 }
@@ -68,7 +67,13 @@ export function UserDetails() {
       <div className="p-8 rounded-xl bg-white shadow-[0_5px_15px_rgba(0,0,0,0.08),0_15px_35px_-5px_rgba(25,28,33,0.2)] ring-1 ring-gray-950/5 max-w-[25rem]">
         <div className="flex flex-col items-center gap-2 mb-6">
           <div className="w-full relative flex justify-center">
-            <img src={user.imageUrl} className="size-20 rounded-full" />
+            <Image
+              src={user.imageUrl}
+              alt={`Profile picture of ${user.firstName || 'user'}`}
+              width={80}
+              height={80}
+              className="rounded-full"
+            />
             <div className="absolute w-fit flex items-center gap-5 top-1/2 -translate-x-2.5 -translate-y-1/2 left-full">
               <div className="relative">
                 <div className="h-px bg-[#BFBFC4] w-[6.5rem]" />
@@ -114,9 +119,7 @@ export function UserDetails() {
             <PointerC label="user.user.id" />
           </Row>
         </div>
-        <h2 className="mt-6 mb-4 text-[0.9375rem] font-semibold">
-          Session details
-        </h2>
+        <h2 className="mt-6 mb-4 text-[0.9375rem] font-semibold">Session details</h2>
         <div className="px-2.5 bg-[#FAFAFB] rounded-lg divide-y divide-[#EEEEF0]">
           <Row desc="Session ID" value={session.id}>
             <PointerC label="session.id" />
@@ -124,24 +127,16 @@ export function UserDetails() {
           <Row desc="Status" value={session.status}>
             <PointerC label="session.status" />
           </Row>
-          <Row
-            desc="Last active"
-            value={formatDateWithNumbers(session.lastActiveAt)}
-          >
+          <Row desc="Last active" value={formatDateWithNumbers(session.lastActiveAt)}>
             <PointerC label="session.lastActiveAt" />
           </Row>
-          <Row
-            desc="Session expiration"
-            value={formatDateWithNumbers(session.expireAt)}
-          >
+          <Row desc="Session expiration" value={formatDateWithNumbers(session.expireAt)}>
             <PointerC label="session.expireAt" />
           </Row>
         </div>
         {organization ? (
           <>
-            <h2 className="mt-6 mb-4 text-[0.9375rem] font-semibold">
-              Organization detail
-            </h2>
+            <h2 className="mt-6 mb-4 text-[0.9375rem] font-semibold">Organization detail</h2>
             <div className="px-2.5 bg-[#FAFAFB] rounded-lg divide-y divide-[#EEEEF0]">
               <Row desc="Organization ID" value={organization.id}>
                 <PointerC label="organization.id" />
@@ -152,10 +147,7 @@ export function UserDetails() {
               <Row desc="Members" value={String(organization.membersCount)}>
                 <PointerC label="organization.membersCount" />
               </Row>
-              <Row
-                desc="Pending invitations"
-                value={String(organization.pendingInvitationsCount)}
-              >
+              <Row desc="Pending invitations" value={String(organization.pendingInvitationsCount)}>
                 <PointerC label="organization.pendingInvitationsCount" />
               </Row>
             </div>

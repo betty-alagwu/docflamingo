@@ -1,11 +1,12 @@
-import { task } from "@trigger.dev/sdk/v3";
-import { prisma } from "../database/prisma";
-import { ProcessNewPullRequestService } from "../services/process-new-pull-request.service";
-import { ProcessClosedPullRequestService } from "../services/process-closed-pull-request.service";
-import { ProcessReopenedPullRequestService } from "../services/process-reopened-pull-request.service";
+import { task } from '@trigger.dev/sdk/v3';
+
+import { prisma } from '../database/prisma';
+import { ProcessClosedPullRequestService } from '../services/process-closed-pull-request.service';
+import { ProcessNewPullRequestService } from '../services/process-new-pull-request.service';
+import { ProcessReopenedPullRequestService } from '../services/process-reopened-pull-request.service';
 
 export interface ProcessPullRequestWebhookTaskPayload {
-  action: "closed" | "opened" | "reopened";
+  action: 'closed' | 'opened' | 'reopened';
   number: number;
   repository: {
     id: number;
@@ -26,7 +27,7 @@ export interface ProcessPullRequestWebhookTaskPayload {
 }
 
 export const processPullRequestWebhookTask = task({
-  id: "process-pull-request-webhook",
+  id: 'process-pull-request-webhook',
   async run(payload: ProcessPullRequestWebhookTaskPayload) {
     const installation = await prisma.installation.findFirst({
       where: {
@@ -35,23 +36,23 @@ export const processPullRequestWebhookTask = task({
     });
 
     if (!installation) {
-      throw new Error("Installation with ID of " + payload.installation.id + " not found");
+      throw new Error('Installation with ID of ' + payload.installation.id + ' not found');
     }
 
-    if (payload.action === "opened") {
+    if (payload.action === 'opened') {
       await new ProcessNewPullRequestService().run(payload);
     }
 
-    if (payload.action === "closed") {
+    if (payload.action === 'closed') {
       await new ProcessClosedPullRequestService().run(payload);
     }
 
-    if (payload.action === "reopened") {
+    if (payload.action === 'reopened') {
       await new ProcessReopenedPullRequestService().run(payload);
     }
 
     return {
-      message: "success",
+      message: 'success',
     };
   },
 });

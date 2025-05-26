@@ -1,12 +1,18 @@
-import { logger } from "@trigger.dev/sdk/v3";
-import { App } from "octokit";
-import { prisma } from "@/app/database/prisma";
-import dayjs from "dayjs";
-import { ProcessPullRequestWebhookTaskPayload } from "@/app/trigger/process-pull-request-webhook";
-import { GithubService, FilePatchInfo } from '@/app/services/git-providers/github.service';
-import { getPullRequestDetails } from "../utils/get-pull-request-details";
-import { TokenHandler, FileInfo } from "@/app/services/token-handler.service";
-import { env } from "@/app/config/env";
+import { logger } from '@trigger.dev/sdk/v3';
+import dayjs from 'dayjs';
+import { App } from 'octokit';
+
+import { env } from '@/app/config/env';
+import { prisma } from '@/app/database/prisma';
+import { type GitHubPullRequest } from '@/app/schemas/github.schema';
+import { GithubService } from '@/app/services/git-providers/github.service';
+import { TokenHandler } from '@/app/services/token-handler.service';
+
+import { getPullRequestDetails } from '../utils/get-pull-request-details';
+
+import type { FilePatchInfo } from '@/app/services/git-providers/github.service';
+import type { FileInfo } from '@/app/services/token-handler.service';
+import type { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
 
 /**
  * Service to handle processing of reopened pull requests
@@ -36,13 +42,12 @@ export class ProcessReopenedPullRequestService {
         await prisma.job.update({
           where: { id: existingJob.id },
           data: {
-            status: "open",
+            status: 'open',
             updatedAt: dayjs().toDate(),
             closedAt: null,
             mergedAt: null,
-            // Preserve existing triggerTaskIds
-            triggerTaskIds: existingJob.triggerTaskIds || []
-          }
+            triggerTaskIds: existingJob.triggerTaskIds || [],
+          },
         });
 
         return [];
@@ -61,14 +66,14 @@ export class ProcessReopenedPullRequestService {
         await prisma.job.update({
           where: { id: existingJob.id },
           data: {
-            status: "open",
+            status: 'open',
             headSha: payload.head.sha,
             updatedAt: dayjs().toDate(),
             closedAt: null,
             mergedAt: null,
             // Preserve existing triggerTaskIds
-            triggerTaskIds: existingJob.triggerTaskIds || []
-          }
+            triggerTaskIds: existingJob.triggerTaskIds || [],
+          },
         });
 
         return [];
@@ -76,22 +81,24 @@ export class ProcessReopenedPullRequestService {
 
       await this.analyzeDifferentialChanges(githubService, newOrChangedFiles);
 
-      const combinedFiles = [...existingJob.reviewedFiles, ...newOrChangedFiles.map(file => file.filename)];
+      const combinedFiles = [
+        ...existingJob.reviewedFiles,
+        ...newOrChangedFiles.map((file) => file.filename),
+      ];
       // Remove duplicates by creating a Set and converting back to array
       const updatedReviewedFiles = Array.from(new Set(combinedFiles));
 
       await prisma.job.update({
         where: { id: existingJob.id },
         data: {
-          status: "open",
+          status: 'open',
           headSha: payload.head.sha,
           reviewedFiles: updatedReviewedFiles,
           updatedAt: dayjs().toDate(),
           closedAt: null,
           mergedAt: null,
-          // Preserve existing triggerTaskIds
-          triggerTaskIds: existingJob.triggerTaskIds || []
-        }
+          triggerTaskIds: existingJob.triggerTaskIds || [],
+        },
       });
 
       return newOrChangedFiles;
@@ -105,20 +112,23 @@ export class ProcessReopenedPullRequestService {
     return await prisma.job.findFirst({
       where: {
         githubRepositoryId: payload.repository.id,
-        githubPullRequestId: payload.number
-      }
+        githubPullRequestId: payload.number,
+      },
     });
   }
 
-  private async createJobRecord(payload: ProcessPullRequestWebhookTaskPayload, prDetails: any) {
+  private async createJobRecord(
+    payload: ProcessPullRequestWebhookTaskPayload,
+    prDetails: GitHubPullRequest | null
+  ) {
     try {
       const installation = await prisma.installation.findFirst({
         where: {
           githubInstallationId: payload.installation.id,
         },
         include: {
-          Customer: true
-        }
+          Customer: true,
+        },
       });
 
       if (!installation || !installation.customerId) {
@@ -131,8 +141,8 @@ export class ProcessReopenedPullRequestService {
         data: {
           customer: {
             connect: {
-              id: customerId
-            }
+              id: customerId,
+            },
           },
           githubRepositoryId: payload.repository.id,
           githubRepositoryName: payload.repository.name,
@@ -140,14 +150,14 @@ export class ProcessReopenedPullRequestService {
           githubPullRequestId: payload.number,
           githubPullRequestNumber: payload.number,
           githubPullRequestTitle: prDetails?.title || `PR #${payload.number}`,
-          status: "open",
+          status: 'open',
           createdAt: dayjs().toDate(),
           updatedAt: dayjs().toDate(),
           headSha: payload.head.sha,
           baseSha: payload.base.sha,
           reviewedFiles: [],
-          triggerTaskIds: []
-        }
+          triggerTaskIds: [],
+        },
       });
 
       return newJob;
@@ -159,15 +169,14 @@ export class ProcessReopenedPullRequestService {
 
   private async updateJobWithReviewedFiles(jobId: string, diffFiles: FilePatchInfo[]) {
     try {
-      const reviewedFiles = diffFiles.map(file => file.filename);
+      const reviewedFiles = diffFiles.map((file) => file.filename);
 
       await prisma.job.update({
         where: { id: jobId },
         data: {
-          reviewedFiles
-        }
+          reviewedFiles,
+        },
       });
-
     } catch (error) {
       logger.error(`Error updating job with reviewed files: ${error}`);
     }
@@ -193,14 +202,14 @@ export class ProcessReopenedPullRequestService {
 
       const tokenHandler = new TokenHandler(systemPrompt, 30000, {
         OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: 3000,
-        OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: 2000
+        OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: 2000,
       });
 
       const fileInfos: FileInfo[] = changedFiles
-        .filter(file => file.patch)
-        .map(file => ({
+        .filter((file) => file.patch)
+        .map((file) => ({
           filename: file.filename,
-          patch: file.patch
+          patch: file.patch,
         }));
 
       if (fileInfos.length === 0) {
@@ -209,13 +218,7 @@ export class ProcessReopenedPullRequestService {
 
       const processedDiff = await tokenHandler.processFiles(fileInfos);
 
-      await aiService.analyzePullRequest(
-        processedDiff,
-        owner.login,
-        repo,
-        prNumber
-      );
-
+      await aiService.analyzePullRequest(processedDiff, owner.login, repo, prNumber);
     } catch (error) {
       throw new Error(`Differential analysis failed: ${error}`);
     }
@@ -227,7 +230,7 @@ export class ProcessReopenedPullRequestService {
     previousHeadSha: string,
     payload: ProcessPullRequestWebhookTaskPayload
   ): Promise<FilePatchInfo[]> {
-    const newFiles = allFiles.filter(file => !previouslyReviewedFiles.includes(file.filename));
+    const newFiles = allFiles.filter((file) => !previouslyReviewedFiles.includes(file.filename));
     const changedFiles: FilePatchInfo[] = [];
 
     try {
@@ -238,20 +241,19 @@ export class ProcessReopenedPullRequestService {
 
       const octokit = await app.getInstallationOctokit(payload.installation.id);
 
-      const previouslyReviewedFilesInCurrentPR = allFiles.filter(
-        file => previouslyReviewedFiles.includes(file.filename)
+      const previouslyReviewedFilesInCurrentPR = allFiles.filter((file) =>
+        previouslyReviewedFiles.includes(file.filename)
       );
 
       for (const file of previouslyReviewedFilesInCurrentPR) {
         try {
-          // Compare file content between previous head SHA and current head SHA
           const { data: comparison } = await octokit.rest.repos.compareCommitsWithBasehead({
             owner: payload.repository.owner.login,
             repo: payload.repository.name,
-            basehead: `${previousHeadSha}...${payload.head.sha}`
+            basehead: `${previousHeadSha}...${payload.head.sha}`,
           });
 
-          const fileChanged = comparison.files?.some(f => f.filename === file.filename);
+          const fileChanged = comparison.files?.some((f) => f.filename === file.filename);
 
           if (fileChanged) {
             changedFiles.push(file);

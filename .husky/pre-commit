@@ -1,0 +1,6 @@
+echo "� Running npm run fix to fix all linting and formatting issues..."
+npm run fix
+
+# Run all tests
+echo "🧪 Running all tests..."
+npm test

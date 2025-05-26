@@ -1,15 +1,17 @@
-import { ProcessClosedPullRequestService } from '@/app/services/process-closed-pull-request.service';
-import { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
-import { App } from 'octokit';
-import { prisma } from '@/app/database/prisma';
 import { logger, runs, configure } from '@trigger.dev/sdk/v3';
+import { App } from 'octokit';
+
+import { prisma } from '@/app/database/prisma';
+import { ProcessClosedPullRequestService } from '@/app/services/process-closed-pull-request.service';
+
+import type { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
 
 jest.mock('@/app/config/env', () => ({
   env: {
     GITHUB_APP_CLIENT_ID: 'test-client-id',
     GITHUB_APP_PRIVATE_KEY: 'test-private-key',
-    TRIGGER_SECRET_KEY: 'test-trigger-secret-key'
-  }
+    TRIGGER_SECRET_KEY: 'test-trigger-secret-key',
+  },
 }));
 
 jest.mock('octokit', () => {
@@ -20,13 +22,13 @@ jest.mock('octokit', () => {
           pulls: {
             get: jest.fn().mockResolvedValue({
               data: {
-                merged: true
-              }
-            })
-          }
-        }
-      })
-    }))
+                merged: true,
+              },
+            }),
+          },
+        },
+      }),
+    })),
   };
 });
 
@@ -35,28 +37,28 @@ jest.mock('@/app/database/prisma', () => {
     id: 'job-id-123',
     githubRepositoryId: 123,
     githubPullRequestId: 1,
-    triggerTaskIds: ['task-id-1', 'task-id-2']
+    triggerTaskIds: ['task-id-1', 'task-id-2'],
   };
 
   return {
     prisma: {
       job: {
         findFirst: jest.fn().mockResolvedValue(mockJob),
-        update: jest.fn().mockResolvedValue({ ...mockJob, triggerTaskIds: [] })
-      }
-    }
+        update: jest.fn().mockResolvedValue({ ...mockJob, triggerTaskIds: [] }),
+      },
+    },
   };
 });
 
 jest.mock('@trigger.dev/sdk/v3', () => ({
   logger: {
     info: jest.fn(),
-    error: jest.fn()
+    error: jest.fn(),
   },
   runs: {
-    cancel: jest.fn().mockResolvedValue({ success: true })
+    cancel: jest.fn().mockResolvedValue({ success: true }),
   },
-  configure: jest.fn()
+  configure: jest.fn(),
 }));
 
 describe('ProcessClosedPullRequestService', () => {
@@ -73,18 +75,18 @@ describe('ProcessClosedPullRequestService', () => {
         id: 123,
         name: 'test-repo',
         owner: {
-          login: 'test-owner'
-        }
+          login: 'test-owner',
+        },
       },
       installation: {
-        id: 12345
+        id: 12345,
       },
       head: {
-        sha: 'head-sha'
+        sha: 'head-sha',
       },
       base: {
-        sha: 'base-sha'
-      }
+        sha: 'base-sha',
+      },
     } as ProcessPullRequestWebhookTaskPayload;
 
     service = new ProcessClosedPullRequestService();
@@ -98,8 +100,8 @@ describe('ProcessClosedPullRequestService', () => {
     expect(prisma.job.findFirst).toHaveBeenCalledWith({
       where: {
         githubRepositoryId: 123,
-        githubPullRequestId: 1
-      }
+        githubPullRequestId: 1,
+      },
     });
   });
 
@@ -129,8 +131,8 @@ describe('ProcessClosedPullRequestService', () => {
       wasMerged: true,
       repository: {
         owner: 'test-owner',
-        name: 'test-repo'
-      }
+        name: 'test-repo',
+      },
     });
   });
 
@@ -139,9 +141,11 @@ describe('ProcessClosedPullRequestService', () => {
     await service.run(mockPayload);
 
     // Assert
-    expect(configure).toHaveBeenCalledWith(expect.objectContaining({
-      accessToken: expect.any(String)
-    }));
+    expect(configure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accessToken: expect.any(String),
+      })
+    );
 
     expect(runs.cancel).toHaveBeenCalledWith('task-id-1');
     expect(runs.cancel).toHaveBeenCalledWith('task-id-2');
@@ -150,8 +154,8 @@ describe('ProcessClosedPullRequestService', () => {
     expect(prisma.job.update).toHaveBeenCalledWith({
       where: { id: 'job-id-123' },
       data: expect.objectContaining({
-        triggerTaskIds: []
-      })
+        triggerTaskIds: [],
+      }),
     });
   });
 
@@ -163,7 +167,9 @@ describe('ProcessClosedPullRequestService', () => {
     await service.run(mockPayload);
 
     // Assert
-    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Error canceling task task-id-1'));
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Error canceling task task-id-1')
+    );
     expect(runs.cancel).toHaveBeenCalledWith('task-id-2');
     expect(prisma.job.update).toHaveBeenCalled();
   });
@@ -172,7 +178,7 @@ describe('ProcessClosedPullRequestService', () => {
     // Arrange
     (prisma.job.findFirst as jest.Mock).mockResolvedValueOnce({
       id: 'job-id-123',
-      triggerTaskIds: []
+      triggerTaskIds: [],
     });
 
     // Act

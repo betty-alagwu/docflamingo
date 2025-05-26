@@ -1,19 +1,20 @@
-import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs"
-import { LearnMore } from "./components/learn-more"
-import screenshotDevices from "./images/user-button@2xrl.webp"
-import signIn from "./images/sign-in@2xrl.webp"
-import verify from "./images/verify@2xrl.webp"
-import userButton2 from "./images/user-button-2@2xrl.webp"
-import signUp from "./images/sign-up@2xrl.webp"
-import logo from "./images/logo.png"
-import "./home.css"
-import Image from "next/image"
-import Link from "next/link"
-import { Footer } from "./components/footer"
+import { SignInButton, SignedIn, SignedOut } from '@clerk/nextjs';
+import Image from 'next/image';
+import Link from 'next/link';
 
-import { CARDS } from "./consts/cards"
-import { ClerkLogo } from "./components/clerk-logo"
-import { NextLogo } from "./components/next-logo"
+import './home.css';
+
+import { ClerkLogo } from './components/clerk-logo';
+import { Footer } from './components/footer';
+import { LearnMore } from './components/learn-more';
+import { NextLogo } from './components/next-logo';
+import { CARDS } from './consts/cards';
+import logo from './images/logo.png';
+import signIn from './images/sign-in@2xrl.webp';
+import signUp from './images/sign-up@2xrl.webp';
+import userButton2 from './images/user-button-2@2xrl.webp';
+import screenshotDevices from './images/user-button@2xrl.webp';
+import verify from './images/verify@2xrl.webp';
 
 export default function Home() {
   return (
@@ -42,8 +43,8 @@ export default function Home() {
             </h1>
 
             <p className="text-[#5E5F6E] pt-3 pb-6 max-w-[30rem] text-[1.0625rem] relative">
-              A simple and powerful Next.js template featuring authentication
-              and user management powered by Clerk.
+              A simple and powerful Next.js template featuring authentication and user management
+              powered by Clerk.
             </p>
             <div className="relative flex gap-3">
               <SignedIn>
@@ -107,5 +108,5 @@ export default function Home() {
       <LearnMore cards={CARDS} />
       <Footer />
     </>
-  )
+  );
 }

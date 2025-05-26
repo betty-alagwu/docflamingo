@@ -5,6 +5,7 @@ export function Footer() {
         href="https://clerk.dev"
         target="_blank"
         className="flex gap-2 font-medium text-[0.8125rem] items-center"
+        rel="noreferrer"
       >
         <svg
           width="16"
@@ -36,8 +37,9 @@ export function Footer() {
             href="https://clerk.com/docs?utm_source=vercel-template&utm_medium=template_repos&utm_campaign=nextjs_template"
             target="_blank"
             className="flex items-center gap-2 font-medium text-[0.8125rem] rounded-full px-3 py-2 hover:bg-gray-100"
+            rel="noreferrer"
           >
-            Clerk Docs{" "}
+            Clerk Docs{' '}
             <svg
               width="16"
               height="16"
@@ -61,6 +63,7 @@ export function Footer() {
             href="https://github.com/clerk/clerk-nextjs-demo-app-router"
             target="_blank"
             className="flex items-center gap-2 font-medium text-[0.8125rem] rounded-full px-3 py-2 hover:bg-gray-100"
+            rel="noreferrer"
           >
             <svg
               width="16"
@@ -89,6 +92,7 @@ export function Footer() {
             href="https://twitter.com/ClerkDev"
             target="_blank"
             className="flex items-center gap-2 font-medium text-[0.8125rem] rounded-full px-3 py-2 hover:bg-gray-100"
+            rel="noreferrer"
           >
             <svg
               width="16"
@@ -117,6 +121,7 @@ export function Footer() {
             href="https://discord.com/invite/b5rXHjAg7A"
             target="_blank"
             className="flex items-center gap-2 font-medium text-[0.8125rem] rounded-full px-3 py-2 hover:bg-gray-100"
+            rel="noreferrer"
           >
             <svg
               width="16"

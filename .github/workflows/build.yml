@@ -1,0 +1,35 @@
+name: build
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-npm
+      - uses: ./.github/actions/install-dependencies
+
+      - name: build project
+        run: npm run build:ci
+        env:
+          CI: true
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: 1
+          # Use safe dummy values for CI build
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_dummy_key_for_ci_build_only"
+          GITHUB_APP_CLIENT_ID: "dummy_client_id"
+          GITHUB_APP_CLIENT_SECRET: "dummy_client_secret"
+          GITHUB_APP_PRIVATE_KEY: "dummy_private_key"
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+          CLERK_SECRET_KEY: "sk_test_dummy_key_for_ci_build_only"
+          DEEPSEEK_API_KEY: "dummy_deepseek_key"
+          TRIGGER_SECRET_KEY: "dummy_trigger_key"
