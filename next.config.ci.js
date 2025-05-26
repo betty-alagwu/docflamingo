@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Skip type checking during build 
+  // Skip type checking during build
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -22,7 +22,6 @@ const nextConfig = {
 
   serverExternalPackages: ['@prisma/client'],
   webpack: (config) => {
-
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
