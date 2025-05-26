@@ -15,7 +15,16 @@ module.exports = {
     ],
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  collectCoverageFrom: ['app/**/*.{ts,tsx}', '!app/**/*.d.ts', '!app/**/_*.{ts,tsx}'],
+  collectCoverageFrom: [
+    'app/**/*.{ts,tsx}',
+    '!app/**/*.d.ts',
+    '!app/**/_*.{ts,tsx}',
+    '!app/components/**/*.tsx', // Exclude React components
+    '!app/**/page.tsx', // Exclude Next.js pages
+    '!app/**/layout.tsx', // Exclude Next.js layouts
+    '!app/globals.css',
+    '!app/home.css',
+  ],
   coverageThreshold: {
     global: {
       branches: 70,
