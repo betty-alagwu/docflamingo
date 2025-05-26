@@ -13,9 +13,11 @@ const nextConfig = {
   },
   // Disable source maps in CI to speed up build
   productionBrowserSourceMaps: false,
-  // Skip static optimization for API routes in CI
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
+  // External packages for server components (updated syntax)
+  serverExternalPackages: ['@prisma/client'],
+  // Configure images for CI
+  images: {
+    unoptimized: true,
   },
   // Configure webpack to handle problematic modules
   webpack: (config, { isServer }) => {
@@ -30,6 +32,11 @@ const nextConfig = {
       };
     }
     return config;
+  },
+  // Skip static generation for problematic routes in CI
+  experimental: {
+    // Disable static optimization that might cause encoding issues
+    staticPageGenerationTimeout: 1000,
   },
 };
 
