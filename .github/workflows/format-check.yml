@@ -1,0 +1,24 @@
+name: format checking
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  format-check:
+    name: format check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-npm
+      - uses: ./.github/actions/install-dependencies
+
+      - uses: ./.github/actions/run-command
+        with:
+          name: run format checking
+          command: npm run format:check

@@ -24,7 +24,7 @@ export class TokenHandler {
       OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: 3000, // Higher value (more lenient)
       OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: 2000, // Lower value (more restrictive)
       MAX_EXTRA_LINES: 10,
-      ...config
+      ...config,
     };
   }
 
@@ -57,17 +57,28 @@ export class TokenHandler {
 
       const isFirstFile = !processedAtLeastOneFile;
 
-      if (totalTokens > this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD && !isFirstFile) {
+      if (
+        totalTokens > this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD &&
+        !isFirstFile
+      ) {
         remainingFiles.push(file.filename);
         continue;
       }
 
-      if (totalTokens + patchTokens > this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD) {
-        const availableTokens = this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD - totalTokens;
+      if (
+        totalTokens + patchTokens >
+        this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD
+      ) {
+        const availableTokens =
+          this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD - totalTokens;
         const clippedPatch = await this.clipPatch(file.patch, availableTokens);
 
         const clippedPatchTokens = this.countTokens(clippedPatch);
-        if (totalTokens + clippedPatchTokens <= this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD || isFirstFile) {
+        if (
+          totalTokens + clippedPatchTokens <=
+            this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD ||
+          isFirstFile
+        ) {
           // For the first file, we'll add it even if it exceeds the soft limit
           patches.push(this.formatPatchWithHeader({ ...file, patch: clippedPatch }));
           totalTokens += clippedPatchTokens;
@@ -79,7 +90,8 @@ export class TokenHandler {
         if (isFirstFile) {
           // Use hard threshold (more restrictive) for the first file if needed
           // This is our last resort before emergency mode
-          const hardAvailableTokens = this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD - totalTokens;
+          const hardAvailableTokens =
+            this.maxTokens - this.config.OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD - totalTokens;
           const heavilyClippedPatch = await this.clipPatch(file.patch, hardAvailableTokens);
           const heavilyClippedTokens = this.countTokens(heavilyClippedPatch);
 
@@ -110,8 +122,12 @@ export class TokenHandler {
           1000 // Absolute maximum in emergency mode
         );
 
-        const emergencyClippedPatch = await this.clipPatch(smallestFile.patch, emergencyTokenBudget);
+        const emergencyClippedPatch = await this.clipPatch(
+          smallestFile.patch,
+          emergencyTokenBudget
+        );
         const emergencyTokens = this.countTokens(emergencyClippedPatch);
+        totalTokens += emergencyTokens;
 
         patches.push(this.formatPatchWithHeader({ ...smallestFile, patch: emergencyClippedPatch }));
       }
@@ -137,28 +153,28 @@ export class TokenHandler {
     const lines = patch.split('\n');
 
     if (maxTokens < 100 && lines.length > 0) {
-      const headerIndex = lines.findIndex(line => line.startsWith('@@ '));
+      const headerIndex = lines.findIndex((line) => line.startsWith('@@ '));
       if (headerIndex >= 0) {
         return lines[headerIndex] + '\n\n[Patch severely truncated due to token limit]';
       }
       return '[Patch could not be included due to token limit]';
     }
 
-    const addedLines: {line: string, index: number}[] = [];
-    const contextLines: {line: string, index: number}[] = [];
+    const addedLines: { line: string; index: number }[] = [];
+    const contextLines: { line: string; index: number }[] = [];
 
     lines.forEach((line, index) => {
       if (line.startsWith('+') && !line.startsWith('+++')) {
-        addedLines.push({line, index});
+        addedLines.push({ line, index });
       } else if (!line.startsWith('-') && !line.startsWith('---')) {
-        contextLines.push({line, index});
+        contextLines.push({ line, index });
       }
     });
 
     let clippedPatch = '';
     let currentTokens = 0;
 
-    const headerIndex = lines.findIndex(line => line.startsWith('@@ '));
+    const headerIndex = lines.findIndex((line) => line.startsWith('@@ '));
     if (headerIndex >= 0) {
       clippedPatch = lines[headerIndex] + '\n';
       currentTokens = this.countTokens(clippedPatch);
@@ -167,7 +183,7 @@ export class TokenHandler {
     // First add all added lines until we hit the token limit
     const includedLineIndices = new Set<number>();
 
-    for (const {line, index} of addedLines) {
+    for (const { line, index } of addedLines) {
       const lineTokens = this.countTokens(line + '\n');
       if (currentTokens + lineTokens <= maxTokens) {
         clippedPatch += line + '\n';
@@ -178,7 +194,7 @@ export class TokenHandler {
       }
     }
 
-    for (const {line, index} of contextLines) {
+    for (const { line, index } of contextLines) {
       if (includedLineIndices.has(index)) continue;
 
       const lineTokens = this.countTokens(line + '\n');
@@ -198,8 +214,8 @@ export class TokenHandler {
   }
 
   private formatRemainingFilesMessage(files: string[]): string {
-    return `\n\nAdditional modified files (insufficient token budget to process):\n${
-      files.map(f => `- ${f}`).join('\n')
-    }`;
+    return `\n\nAdditional modified files (insufficient token budget to process):\n${files
+      .map((f) => `- ${f}`)
+      .join('\n')}`;
   }
 }

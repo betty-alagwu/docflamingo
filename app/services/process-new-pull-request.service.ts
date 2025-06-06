@@ -1,9 +1,13 @@
-import { ProcessPullRequestWebhookTaskPayload } from "@/app/trigger/process-pull-request-webhook";
-import { GithubService } from '@/app/services/git-providers/github.service';
-import { prisma } from "@/app/database/prisma";
-import { logger } from "@trigger.dev/sdk/v3";
-import dayjs from "dayjs";
-import { getPullRequestDetails } from "../utils/get-pull-request-details";
+import { logger } from '@trigger.dev/sdk/v3';
+import dayjs from 'dayjs';
+
+import { prisma } from '@/app/database/prisma';
+import { GithubService, type FilePatchInfo } from '@/app/services/git-providers/github.service';
+
+import { type GitHubPullRequest } from '../schemas/github.schema';
+import { getPullRequestDetails } from '../utils/get-pull-request-details';
+
+import type { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
 
 export class ProcessNewPullRequestService {
   async run(payload: ProcessPullRequestWebhookTaskPayload) {
@@ -26,15 +30,18 @@ export class ProcessNewPullRequestService {
     }
   }
 
-  private async createOrUpdateJobRecord(payload: ProcessPullRequestWebhookTaskPayload, prDetails: any) {
+  private async createOrUpdateJobRecord(
+    payload: ProcessPullRequestWebhookTaskPayload,
+    prDetails: GitHubPullRequest | null
+  ) {
     try {
       const installation = await prisma.installation.findFirst({
         where: {
           githubInstallationId: payload.installation.id,
         },
         include: {
-          Customer: true
-        }
+          Customer: true,
+        },
       });
 
       if (!installation || !installation.customerId) {
@@ -46,23 +53,23 @@ export class ProcessNewPullRequestService {
       const existingJob = await prisma.job.findFirst({
         where: {
           githubRepositoryId: payload.repository.id,
-          githubPullRequestId: payload.number
-        }
+          githubPullRequestId: payload.number,
+        },
       });
 
       if (existingJob) {
         const updatedJob = await prisma.job.update({
           where: { id: existingJob.id },
           data: {
-            status: "open",
+            status: 'open',
             headSha: payload.head.sha,
             baseSha: payload.base.sha,
             updatedAt: dayjs().toDate(),
             closedAt: null,
             mergedAt: null,
             // Preserve existing triggerTaskIds
-            triggerTaskIds: existingJob.triggerTaskIds || []
-          }
+            triggerTaskIds: existingJob.triggerTaskIds || [],
+          },
         });
 
         return updatedJob;
@@ -71,8 +78,8 @@ export class ProcessNewPullRequestService {
           data: {
             customer: {
               connect: {
-                id: customerId
-              }
+                id: customerId,
+              },
             },
             githubRepositoryId: payload.repository.id,
             githubRepositoryName: payload.repository.name,
@@ -82,12 +89,12 @@ export class ProcessNewPullRequestService {
             githubPullRequestTitle: prDetails?.title || `PR #${payload.number}`,
             createdAt: dayjs().toDate(),
             updatedAt: dayjs().toDate(),
-            status: "open",
+            status: 'open',
             headSha: payload.head.sha,
             baseSha: payload.base.sha,
             reviewedFiles: [],
-            triggerTaskIds: []
-          }
+            triggerTaskIds: [],
+          },
         });
 
         return newJob;
@@ -98,17 +105,16 @@ export class ProcessNewPullRequestService {
     }
   }
 
-  private async updateJobWithReviewedFiles(jobId: string, diffFiles: any[]) {
+  private async updateJobWithReviewedFiles(jobId: string, diffFiles: FilePatchInfo[]) {
     try {
-      const reviewedFiles = diffFiles.map(file => file.filename);
+      const reviewedFiles = diffFiles.map((file) => file.filename);
 
       await prisma.job.update({
         where: { id: jobId },
         data: {
-          reviewedFiles
-        }
+          reviewedFiles,
+        },
       });
-
     } catch (error) {
       logger.error(`Error updating job with reviewed files: ${error}`);
     }

@@ -1,6 +1,7 @@
 import { GithubCommentService } from '@/app/services/git-providers/github-comment.service';
-import { ProcessCommentWebhookTaskPayload } from '@/app/trigger/process-comment-webhook';
-import { Comment } from '@/app/interfaces/comment-handler.interface';
+
+import type { Comment } from '@/app/interfaces/comment-handler.interface';
+import type { ProcessCommentWebhookTaskPayload } from '@/app/trigger/process-comment-webhook';
 
 const INSTALLATION_ID = 12345;
 const REPO_OWNER = 'owner';
@@ -20,24 +21,24 @@ jest.mock('next/server', () => ({
       body,
       json: () => body,
       toJSON: () => JSON.stringify(body),
-      toString: () => JSON.stringify(body)
-    }))
-  }
+      toString: () => JSON.stringify(body),
+    })),
+  },
 }));
 
 jest.mock('@/app/services/ai.service', () => ({
   AIService: jest.fn().mockImplementation(() => ({
     generateResponse: jest.fn().mockResolvedValue(MOCK_AI_RESPONSE),
     generateCommentResponse: jest.fn().mockResolvedValue(MOCK_AI_RESPONSE),
-    getSystemPrompt: jest.fn().mockReturnValue(SYSTEM_PROMPT)
-  }))
+    getSystemPrompt: jest.fn().mockReturnValue(SYSTEM_PROMPT),
+  })),
 }));
 
 jest.mock('@/app/services/token-handler.service', () => ({
   TokenHandler: jest.fn().mockImplementation(() => ({
     countTokens: jest.fn().mockReturnValue(10),
-    processFiles: jest.fn().mockResolvedValue('Processed files')
-  }))
+    processFiles: jest.fn().mockResolvedValue('Processed files'),
+  })),
 }));
 
 jest.mock('octokit', () => {
@@ -52,8 +53,8 @@ jest.mock('octokit', () => {
           body: 'Test comment',
           user: { login: USER_LOGIN },
           created_at: '2023-01-01T00:00:00Z',
-          issue_url: `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues/${PR_NUMBER}`
-        }
+          issue_url: `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues/${PR_NUMBER}`,
+        },
       };
     } else if (url.includes(`/issues/${PR_NUMBER}/comments`)) {
       return {
@@ -62,30 +63,30 @@ jest.mock('octokit', () => {
             id: COMMENT_ID,
             body: 'Test comment',
             user: { login: USER_LOGIN },
-            created_at: '2023-01-01T00:00:00Z'
+            created_at: '2023-01-01T00:00:00Z',
           },
           {
             id: REPLY_TO_ID,
             body: 'Bot comment',
             user: { login: BOT_LOGIN },
-            created_at: '2023-01-01T01:00:00Z'
-          }
-        ]
+            created_at: '2023-01-01T01:00:00Z',
+          },
+        ],
       };
     } else if (url.includes(`/pulls/${PR_NUMBER}/files`)) {
       return {
         data: [
           {
             filename: 'test.js',
-            patch: '@@ -1,3 +1,4 @@\n line1\n+line2\n line3\n line4'
-          }
-        ]
+            patch: '@@ -1,3 +1,4 @@\n line1\n+line2\n line3\n line4',
+          },
+        ],
       };
     } else if (url.includes('/contents/')) {
       return {
         data: {
-          content: Buffer.from('line1\nline2\nline3\nline4\nline5').toString('base64')
-        }
+          content: Buffer.from('line1\nline2\nline3\nline4\nline5').toString('base64'),
+        },
       };
     } else if (url.includes('/reactions')) {
       return { data: {} };
@@ -97,19 +98,19 @@ jest.mock('octokit', () => {
   const mockOctokit = {
     rest: {
       issues: {
-        createComment: createCommentMock
+        createComment: createCommentMock,
       },
       reactions: {
-        createForIssueComment: createReactionMock
-      }
+        createForIssueComment: createReactionMock,
+      },
     },
-    request: requestMock
+    request: requestMock,
   };
 
   return {
     App: jest.fn().mockImplementation(() => ({
-      getInstallationOctokit: jest.fn().mockResolvedValue(mockOctokit)
-    }))
+      getInstallationOctokit: jest.fn().mockResolvedValue(mockOctokit),
+    })),
   };
 });
 
@@ -124,22 +125,22 @@ function createCommentPayload(overrides = {}): ProcessCommentWebhookTaskPayload 
       body: 'Test comment',
       user: {
         login: USER_LOGIN,
-        id: 456
+        id: 456,
       },
       created_at: '2023-01-01T00:00:00Z',
-      updated_at: '2023-01-01T00:00:00Z'
+      updated_at: '2023-01-01T00:00:00Z',
     },
     repository: {
       id: 123,
       name: REPO_NAME,
       owner: {
-        login: REPO_OWNER
+        login: REPO_OWNER,
       },
     },
     installation: {
-      id: INSTALLATION_ID
+      id: INSTALLATION_ID,
     },
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -151,7 +152,7 @@ function createMockCommentThread(): Comment[] {
       isAiSuggestion: false,
       createdAt: new Date('2023-01-01T00:00:00Z'),
       user: USER_LOGIN,
-      inReplyToId: undefined
+      inReplyToId: undefined,
     },
     {
       id: '456',
@@ -159,7 +160,7 @@ function createMockCommentThread(): Comment[] {
       isAiSuggestion: true,
       createdAt: new Date('2023-01-01T01:00:00Z'),
       user: BOT_LOGIN,
-      inReplyToId: '123'
+      inReplyToId: '123',
     },
     {
       id: '789',
@@ -167,8 +168,8 @@ function createMockCommentThread(): Comment[] {
       isAiSuggestion: false,
       createdAt: new Date('2023-01-01T02:00:00Z'),
       user: USER_LOGIN,
-      inReplyToId: '456'
-    }
+      inReplyToId: '456',
+    },
   ];
 }
 
@@ -190,12 +191,12 @@ describe('GithubCommentService', () => {
       // Create a fresh mock to track calls
       const mockGetInstallationOctokit = jest.fn().mockResolvedValue({
         rest: { issues: {}, reactions: {} },
-        request: jest.fn()
+        request: jest.fn(),
       });
 
       // Override the mock implementation
       jest.requireMock('octokit').App.mockImplementation(() => ({
-        getInstallationOctokit: mockGetInstallationOctokit
+        getInstallationOctokit: mockGetInstallationOctokit,
       }));
 
       const newService = new GithubCommentService(mockPayload);
@@ -206,7 +207,7 @@ describe('GithubCommentService', () => {
       await newService.initialize();
       expect(octokitApp).toHaveBeenCalledWith({
         appId: 'test-client-id',
-        privateKey: 'test-private-key'
+        privateKey: 'test-private-key',
       });
       expect(getInstallationOctokitMock).toHaveBeenCalledWith(INSTALLATION_ID);
     });
@@ -233,10 +234,10 @@ describe('GithubCommentService', () => {
         body: 'Test PR body',
         user: {
           login: 'pr-author',
-          id: 789
+          id: 789,
         },
         url: `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${PR_NUMBER}`,
-        html_url: `https://github.com/${REPO_OWNER}/${REPO_NAME}/pull/${PR_NUMBER}`
+        html_url: `https://github.com/${REPO_OWNER}/${REPO_NAME}/pull/${PR_NUMBER}`,
       };
 
       service.getCommentThread = jest.fn().mockResolvedValue(createMockCommentThread());
@@ -272,14 +273,14 @@ describe('GithubCommentService', () => {
       const nextServerMock = jest.requireMock('next/server');
       nextServerMock.NextResponse.json.mockReturnValueOnce({
         status: 'ignored',
-        reason: 'Comment is from the AI bot, not a user'
+        reason: 'Comment is from the AI bot, not a user',
       });
 
       await service.processGithubUserReply();
 
       expect(nextServerMock.NextResponse.json).toHaveBeenCalledWith({
         status: 'ignored',
-        reason: 'Comment is from the AI bot, not a user'
+        reason: 'Comment is from the AI bot, not a user',
       });
       expect(service.getCommentThread).not.toHaveBeenCalled();
     });
@@ -291,14 +292,14 @@ describe('GithubCommentService', () => {
       const nextServerMock = jest.requireMock('next/server');
       nextServerMock.NextResponse.json.mockReturnValueOnce({
         status: 'ignored',
-        reason: 'Not a reply to an AI-generated comment'
+        reason: 'Not a reply to an AI-generated comment',
       });
 
       await service.processGithubUserReply();
 
       expect(nextServerMock.NextResponse.json).toHaveBeenCalledWith({
         status: 'ignored',
-        reason: 'Not a reply to an AI-generated comment'
+        reason: 'Not a reply to an AI-generated comment',
       });
     });
 
@@ -311,10 +312,10 @@ describe('GithubCommentService', () => {
         body: 'Test PR body',
         user: {
           login: 'pr-author',
-          id: 789
+          id: 789,
         },
         url: `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${PR_NUMBER}`,
-        html_url: `https://github.com/${REPO_OWNER}/${REPO_NAME}/pull/${PR_NUMBER}`
+        html_url: `https://github.com/${REPO_OWNER}/${REPO_NAME}/pull/${PR_NUMBER}`,
       };
 
       // Mock the getCommentThread method to return a thread with an AI comment
@@ -324,8 +325,8 @@ describe('GithubCommentService', () => {
           body: 'AI comment',
           isAiSuggestion: true,
           createdAt: new Date('2023-01-01T01:00:00Z'),
-          user: BOT_LOGIN
-        }
+          user: BOT_LOGIN,
+        },
       ]);
 
       // Mock the private methods directly on the service instance
@@ -334,13 +335,15 @@ describe('GithubCommentService', () => {
 
       // Mock the AI service
       const aiServiceMock = jest.requireMock('@/app/services/ai.service');
-      aiServiceMock.AIService.mock.results[0].value.generateCommentResponse.mockResolvedValue(MOCK_AI_RESPONSE);
+      aiServiceMock.AIService.mock.results[0].value.generateCommentResponse.mockResolvedValue(
+        MOCK_AI_RESPONSE
+      );
 
       // Mock the NextResponse
       const nextServerMock = jest.requireMock('next/server');
       nextServerMock.NextResponse.json.mockReturnValueOnce({
         status: 'success',
-        message: 'Replied to user comment'
+        message: 'Replied to user comment',
       });
 
       // Call the method
@@ -365,7 +368,7 @@ describe('GithubCommentService', () => {
       // Verify the response
       expect(nextServerMock.NextResponse.json).toHaveBeenCalledWith({
         status: 'success',
-        message: 'Replied to user comment'
+        message: 'Replied to user comment',
       });
     });
   });
@@ -384,15 +387,15 @@ describe('GithubCommentService', () => {
             body: 'Initial comment',
             isAiSuggestion: false,
             createdAt: new Date('2023-01-01T00:00:00Z'),
-            user: USER_LOGIN
+            user: USER_LOGIN,
           },
           {
             id: '456',
             body: 'AI response',
             isAiSuggestion: true,
             createdAt: new Date('2023-01-01T01:00:00Z'),
-            user: BOT_LOGIN
-          }
+            user: BOT_LOGIN,
+          },
         ];
         const userQuestion = 'How do I fix this bug?';
 
@@ -414,8 +417,8 @@ describe('GithubCommentService', () => {
             body: longComment,
             isAiSuggestion: false,
             createdAt: new Date('2023-01-01T00:00:00Z'),
-            user: USER_LOGIN
-          }
+            user: USER_LOGIN,
+          },
         ];
         const userQuestion = 'How do I fix this bug?';
 
@@ -437,7 +440,7 @@ describe('GithubCommentService', () => {
           body: 'Test comment',
           user: { login: USER_LOGIN },
           created_at: '2023-01-01T00:00:00Z',
-          in_reply_to_id: 456
+          in_reply_to_id: 456,
         };
 
         const mappedComment = mapGithubComment(githubComment);
@@ -456,7 +459,7 @@ describe('GithubCommentService', () => {
           id: 123,
           body: 'AI suggestion',
           user: { login: BOT_LOGIN },
-          created_at: '2023-01-01T00:00:00Z'
+          created_at: '2023-01-01T00:00:00Z',
         };
 
         const mappedComment = mapGithubComment(githubComment);

@@ -1,0 +1,26 @@
+name: build
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-npm
+      - uses: ./.github/actions/install-dependencies
+
+      - name: build project
+        run: npm run build:ci
+        env:
+          CI: true
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: 1

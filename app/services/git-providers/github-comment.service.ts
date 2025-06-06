@@ -1,20 +1,20 @@
-import { App } from "octokit";
-import { logger } from "@trigger.dev/sdk/v3";
-import { ProcessCommentWebhookTaskPayload } from "@/app/trigger/process-comment-webhook";
-import { Comment, GithubPullRequestComment } from "@/app/interfaces/comment-handler.interface";
-import { isAiBot } from "@/app/utils/comment-utils";
-import { AIService } from "../ai.service";
-import { TokenHandler } from "../token-handler.service";
-import { NextResponse } from "next/server";
-import { env } from "@/app/config/env";
+import { logger } from '@trigger.dev/sdk/v3';
+import { NextResponse } from 'next/server';
+import { App } from 'octokit';
+
+import { env } from '@/app/config/env';
+import { githubPullRequestCommentSchema } from '@/app/schemas/github.schema';
+import { isAiBot } from '@/app/utils/comment-utils';
+
+import { AIService } from '../ai.service';
+import { TokenHandler } from '../token-handler.service';
+
+import type { Comment, GithubPullRequestComment } from '@/app/interfaces/comment-handler.interface';
+import type { ProcessCommentWebhookTaskPayload } from '@/app/trigger/process-comment-webhook';
 
 export class GithubCommentService {
-  protected app = new App({
-    appId: env.GITHUB_APP_CLIENT_ID,
-    privateKey: env.GITHUB_APP_PRIVATE_KEY,
-  });
-
-  protected octokit!: Awaited<ReturnType<typeof this.app.getInstallationOctokit>>;
+  protected app?: App;
+  protected octokit!: Awaited<ReturnType<typeof App.prototype.getInstallationOctokit>>;
   private aiService: AIService;
   private tokenHandler: TokenHandler;
 
@@ -27,12 +27,23 @@ export class GithubCommentService {
     const systemPrompt = this.aiService.getSystemPrompt();
     this.tokenHandler = new TokenHandler(systemPrompt, this.MAX_COMMENT_TOKENS, {
       OUTPUT_BUFFER_TOKENS_SOFT_THRESHOLD: this.OUTPUT_BUFFER_TOKENS,
-      OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: this.OUTPUT_BUFFER_TOKENS / 2
+      OUTPUT_BUFFER_TOKENS_HARD_THRESHOLD: this.OUTPUT_BUFFER_TOKENS / 2,
     });
   }
 
+  private getApp(): App {
+    if (!this.app) {
+      this.app = new App({
+        appId: env.GITHUB_APP_CLIENT_ID,
+        privateKey: env.GITHUB_APP_PRIVATE_KEY,
+      });
+    }
+    return this.app;
+  }
+
   public async initialize(): Promise<void> {
-    this.octokit = await this.app.getInstallationOctokit(this.payload.installation.id);
+    const app = this.getApp();
+    this.octokit = await app.getInstallationOctokit(this.payload.installation.id);
   }
 
   public async processGithubUserReply() {
@@ -41,7 +52,10 @@ export class GithubCommentService {
         const isUserComment = !isAiBot(this.payload.comment.user.login);
 
         if (!isUserComment) {
-          return NextResponse.json({ status: "ignored", reason: "Comment is from the AI bot, not a user" });
+          return NextResponse.json({
+            status: 'ignored',
+            reason: 'Comment is from the AI bot, not a user',
+          });
         }
 
         const commentThread = await this.getCommentThread();
@@ -53,7 +67,10 @@ export class GithubCommentService {
 
           if (parentComment && parentComment.isAiSuggestion) {
             if (!this.payload.pull_request) {
-              return NextResponse.json({ status: "error", reason: "Pull request information not found" });
+              return NextResponse.json({
+                status: 'error',
+                reason: 'Pull request information not found',
+              });
             }
 
             const owner = this.payload.repository.owner.login;
@@ -61,40 +78,63 @@ export class GithubCommentService {
             const prNumber = this.payload.pull_request.number;
 
             try {
-              await this.addReactionToComment(owner, repo, this.payload.comment.id.toString(), "eyes");
+              await this.addReactionToComment(
+                owner,
+                repo,
+                this.payload.comment.id.toString(),
+                'eyes'
+              );
             } catch (reactionError) {
               logger.error(`Failed to add reaction to comment: ${reactionError}`);
             }
 
-            const alreadyResponded = commentThread.some(comment =>
-              comment.isAiSuggestion &&
-              comment.inReplyToId === this.payload.comment.id.toString());
+            const alreadyResponded = commentThread.some(
+              (comment) =>
+                comment.isAiSuggestion && comment.inReplyToId === this.payload.comment.id.toString()
+            );
 
             if (alreadyResponded) {
-              return NextResponse.json({ status: "ignored", reason: "Already responded to this comment" });
+              return NextResponse.json({
+                status: 'ignored',
+                reason: 'Already responded to this comment',
+              });
             }
 
-            const prompt = this.buildPromptFromCommentThread(commentThread, this.payload.comment.body);
+            const prompt = this.buildPromptFromCommentThread(
+              commentThread,
+              this.payload.comment.body
+            );
             const aiResponse = await this.aiService.generateCommentResponse(prompt);
             const responseTokens = this.tokenHandler.countTokens(aiResponse);
             const promptTokens = this.tokenHandler.countTokens(prompt);
             const totalTokens = promptTokens + responseTokens;
 
-            logger.info(`Total tokens for this interaction: ${totalTokens} (prompt: ${promptTokens}, response: ${responseTokens})`);
+            logger.info(
+              `Total tokens for this interaction: ${totalTokens} (prompt: ${promptTokens}, response: ${responseTokens})`
+            );
 
-            await this.replyToComment(owner, repo, prNumber, this.payload.comment.id.toString(), aiResponse);
+            await this.replyToComment(
+              owner,
+              repo,
+              prNumber,
+              this.payload.comment.id.toString(),
+              aiResponse
+            );
 
-            return NextResponse.json({ status: "success", message: "Replied to user comment" });
+            return NextResponse.json({ status: 'success', message: 'Replied to user comment' });
           }
         }
 
-        return NextResponse.json({ status: "ignored", reason: "Not a reply to an AI-generated comment" });
+        return NextResponse.json({
+          status: 'ignored',
+          reason: 'Not a reply to an AI-generated comment',
+        });
       }
 
-      return { status: "ignored", reason: "Not a reply to any comment" };
+      return { status: 'ignored', reason: 'Not a reply to any comment' };
     } catch (error) {
       return NextResponse.json(
-        { status: "error", message: `Error processing comment reply: ${error}` },
+        { status: 'error', message: `Error processing comment reply: ${error}` },
         { status: 500 }
       );
     }
@@ -109,8 +149,8 @@ export class GithubCommentService {
       const prNumber = this.payload.pull_request.number;
 
       if (this.payload.comment.in_reply_to_id) {
-        const { data: allComments } = await this.octokit.request(
-          "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments",
+        const { data: rawComments } = await this.octokit.request(
+          'GET /repos/{owner}/{repo}/pulls/{pull_number}/comments',
           {
             owner,
             repo,
@@ -118,37 +158,39 @@ export class GithubCommentService {
           }
         );
 
+        // Validate comments against our schema
+        const allComments = rawComments.map((comment: GithubPullRequestComment) =>
+          githubPullRequestCommentSchema.parse(comment)
+        );
+
         let rootCommentId = this.payload.comment.in_reply_to_id;
-        const rootComment = allComments.find(comment => comment.id === rootCommentId);
+        const rootComment = allComments.find(
+          (comment: GithubPullRequestComment) => comment.id === rootCommentId
+        );
 
         if (rootComment && rootComment.in_reply_to_id) {
           rootCommentId = rootComment.in_reply_to_id;
         }
 
-        const threadComments = allComments.filter(comment =>
-          comment.id === rootCommentId ||
-          comment.in_reply_to_id === rootCommentId ||
-          comment.id === this.payload.comment.in_reply_to_id ||
-          comment.in_reply_to_id === this.payload.comment.in_reply_to_id
+        const threadComments = allComments.filter(
+          (comment: GithubPullRequestComment) =>
+            comment.id === rootCommentId ||
+            comment.in_reply_to_id === rootCommentId ||
+            comment.id === this.payload.comment.in_reply_to_id ||
+            comment.in_reply_to_id === this.payload.comment.in_reply_to_id
         );
 
         logger.info(`Found ${threadComments.length} comments in this thread`);
-        const currentCommentInThread = threadComments.some((comment) => comment.id === this.payload.comment.id);
+        const currentCommentInThread = threadComments.some(
+          (comment: GithubPullRequestComment) => comment.id === this.payload.comment.id
+        );
 
-        const mappedComments = threadComments.map((comment) => this.mapGithubComment(comment));
+        const mappedComments = threadComments.map((comment: GithubPullRequestComment) =>
+          this.mapGithubComment(comment)
+        );
 
         if (!currentCommentInThread) {
-          mappedComments.push(
-            this.mapGithubComment({
-              id: this.payload.comment.id,
-              body: this.payload.comment.body,
-              user: this.payload.comment.user,
-              created_at: this.payload.comment.created_at,
-              updated_at: this.payload.comment.updated_at,
-              in_reply_to_id: this.payload.comment.in_reply_to_id,
-              commit_id: this.payload.comment.commit_id,
-            })
-          );
+          mappedComments.push(this.mapCurrentComment());
         }
 
         return mappedComments;
@@ -162,29 +204,33 @@ export class GithubCommentService {
   }
 
   private buildPromptFromCommentThread(commentThread: Comment[], userQuestion: string): string {
-    const sortedComments = [...commentThread].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const sortedComments = [...commentThread].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+    );
 
-    let conversationHistory = "Instructions:\n";
-    conversationHistory += "1. Provide a single, concise, and helpful response to the user's question\n";
-    conversationHistory += "2. Do not suggest additional questions or topics unless specifically asked\n";
-    conversationHistory += "3. Keep your response focused and to the point\n";
-    conversationHistory += "4. Do not repeat information that has already been provided\n\n";
+    let conversationHistory = 'Instructions:\n';
+    conversationHistory +=
+      "1. Provide a single, concise, and helpful response to the user's question\n";
+    conversationHistory +=
+      '2. Do not suggest additional questions or topics unless specifically asked\n';
+    conversationHistory += '3. Keep your response focused and to the point\n';
+    conversationHistory += '4. Do not repeat information that has already been provided\n\n';
 
     conversationHistory += `User: ${userQuestion}\n\n`;
 
     let tokensUsed = this.tokenHandler.countTokens(conversationHistory);
 
-    let historyContent = "Previous conversation:\n";
+    let historyContent = 'Previous conversation:\n';
 
     // Process comments from newest to oldest to prioritize recent context
     const reversedComments = [...sortedComments].reverse();
 
     for (const comment of reversedComments) {
-      const role = comment.isAiSuggestion ? "AI" : "User";
+      const role = comment.isAiSuggestion ? 'AI' : 'User';
 
       let commentBody = comment.body;
       if (commentBody.length > 500) {
-        commentBody = commentBody.substring(0, 500) + "... (truncated)";
+        commentBody = commentBody.substring(0, 500) + '... (truncated)';
       }
 
       const commentText = `${role}: ${commentBody}\n\n`;
@@ -194,12 +240,15 @@ export class GithubCommentService {
         historyContent = commentText + historyContent; // Prepend to keep newest comments
         tokensUsed += commentTokens;
       } else {
-        historyContent = "... (earlier conversation omitted due to token limits)\n\n" + historyContent;
+        historyContent =
+          '... (earlier conversation omitted due to token limits)\n\n' + historyContent;
         break;
       }
     }
 
-    logger.info(`Comment thread prompt using ${tokensUsed} tokens out of ${this.MAX_COMMENT_TOKENS}`);
+    logger.info(
+      `Comment thread prompt using ${tokensUsed} tokens out of ${this.MAX_COMMENT_TOKENS}`
+    );
     return conversationHistory + historyContent;
   }
 
@@ -211,16 +260,20 @@ export class GithubCommentService {
     response: string
   ): Promise<void> {
     try {
-      await this.octokit.request("POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies", {
-        owner,
-        repo,
-        pull_number: prNumber,
-        comment_id: parseInt(commentId),
-        body: response,
-      });
+      await this.octokit.request(
+        'POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies',
+        {
+          owner,
+          repo,
+          pull_number: prNumber,
+          comment_id: parseInt(commentId),
+          body: response,
+        }
+      );
     } catch (error) {
+      logger.error(`Failed to reply to comment: ${error}`);
       try {
-        await this.octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/comments", {
+        await this.octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
           owner,
           repo,
           issue_number: prNumber,
@@ -236,14 +289,14 @@ export class GithubCommentService {
     const commentId = comment.id.toString();
     const inReplyToId = comment.in_reply_to_id?.toString() || undefined;
 
-    const isBot = isAiBot(comment.user?.login || "");
+    const isBot = isAiBot(comment.user?.login || '');
 
     return {
       id: commentId,
-      body: comment.body || "",
+      body: comment.body || '',
       isAiSuggestion: isBot,
       createdAt: new Date(comment.created_at),
-      user: comment.user?.login || "unknown",
+      user: comment.user?.login || 'unknown',
       inReplyToId: inReplyToId,
       path: comment.path,
       position: comment.position,
@@ -258,28 +311,61 @@ export class GithubCommentService {
     };
   }
 
+  private mapCurrentComment(): Comment {
+    const commentId = this.payload.comment.id.toString();
+    const inReplyToId = this.payload.comment.in_reply_to_id?.toString() || undefined;
+
+    const isBot = isAiBot(this.payload.comment.user?.login || '');
+
+    return {
+      id: commentId,
+      body: this.payload.comment.body || '',
+      isAiSuggestion: isBot,
+      createdAt: new Date(this.payload.comment.created_at),
+      user: this.payload.comment.user?.login || 'unknown',
+      inReplyToId: inReplyToId,
+      path: undefined, // Current comment from payload doesn't have path info
+      position: undefined,
+      line: undefined,
+      side: undefined,
+      commitId: this.payload.comment.commit_id,
+      diffHunk: undefined,
+      originalPosition: undefined,
+      startLine: undefined,
+      originalLine: undefined,
+      subjectType: undefined,
+    };
+  }
+
   private async addReactionToComment(
     owner: string,
     repo: string,
     commentId: string,
-    reaction: "+1" | "-1" | "laugh" | "confused" | "heart" | "hooray" | "rocket" | "eyes"
+    reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes'
   ): Promise<void> {
     try {
-      await this.octokit.request('POST /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions', {
-        owner,
-        repo,
-        comment_id: parseInt(commentId),
-        content: reaction
-      });
-    } catch (error) {
-      // If that fails, try to add reaction to an issue comment
-      try {
-        await this.octokit.request('POST /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions', {
+      await this.octokit.request(
+        'POST /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions',
+        {
           owner,
           repo,
           comment_id: parseInt(commentId),
-          content: reaction
-        });
+          content: reaction,
+        }
+      );
+    } catch (error) {
+      logger.error(`Failed to add reaction to comment: ${error}`);
+      // If that fails, try to add reaction to an issue comment
+      try {
+        await this.octokit.request(
+          'POST /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions',
+          {
+            owner,
+            repo,
+            comment_id: parseInt(commentId),
+            content: reaction,
+          }
+        );
       } catch (fallbackError) {
         throw new Error(`Failed to add reaction to comment: ${fallbackError}`);
       }

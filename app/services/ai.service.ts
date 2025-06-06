@@ -1,9 +1,12 @@
-import { createDeepSeek } from "@ai-sdk/deepseek";
-import { logger } from "@trigger.dev/sdk/v3";
-import { generateText } from "ai";
-import { App, Octokit } from "octokit";
-import { z } from "zod";
-import { env } from "@/app/config/env";
+import { createDeepSeek } from '@ai-sdk/deepseek';
+import { logger } from '@trigger.dev/sdk/v3';
+import { generateText } from 'ai';
+import { App } from 'octokit';
+
+import { env } from '@/app/config/env';
+import { githubInstallationsSchema } from '@/app/schemas/github.schema';
+
+import type { Octokit } from 'octokit';
 
 interface CodeSuggestion {
   suggestedCode: string;
@@ -40,47 +43,50 @@ interface FormattedComment {
 export class AIService {
   private deepseek;
   private octokit!: Octokit;
-  private app;
+  private app?: App;
+
   constructor() {
     this.deepseek = createDeepSeek({
       apiKey: env.DEEPSEEK_API_KEY,
     });
-
-    this.app = new App({
-      appId: env.GITHUB_APP_CLIENT_ID,
-      privateKey: env.GITHUB_APP_PRIVATE_KEY,
-    });
   }
 
-  accountSchema = z.object({
-    login: z.string(),
-  });
-  installationSchema = z.object({
-    id: z.number(),
-    account: this.accountSchema,
-  });
-  installationsSchema = z.array(this.installationSchema);
+  private getApp(): App {
+    if (!this.app) {
+      this.app = new App({
+        appId: env.GITHUB_APP_CLIENT_ID,
+        privateKey: env.GITHUB_APP_PRIVATE_KEY,
+      });
+    }
+    return this.app;
+  }
 
   private async authenticate(owner: string, repo: string) {
-    const { data: installations } = await this.app.octokit.request("GET /app/installations");
-    const validatedInstallations = this.installationsSchema.parse(installations);
+    const app = this.getApp();
+    const { data: installations } = await app.octokit.request('GET /app/installations');
+    const validatedInstallations = githubInstallationsSchema.parse(installations);
     const installation = validatedInstallations.find((inst) => inst.account?.login === owner);
 
     if (!installation) {
       throw new Error(`No installation found for repository ${owner}/${repo}`);
     }
 
-    this.octokit = await this.app.getInstallationOctokit(installation.id);
+    this.octokit = await app.getInstallationOctokit(installation.id);
   }
 
-  public async analyzePullRequest(patchDiff: string, owner: string, repo: string, prNumber: number) {
+  public async analyzePullRequest(
+    patchDiff: string,
+    owner: string,
+    repo: string,
+    prNumber: number
+  ) {
     try {
       await this.authenticate(owner, repo);
       const systemPrompt = this.generateSystemPrompt();
       const userPrompt = this.generateUserPrompt(patchDiff);
 
       const { text } = await generateText({
-        model: this.deepseek("deepseek-chat"),
+        model: this.deepseek('deepseek-chat'),
         prompt: `${systemPrompt}\n\n${userPrompt}`,
       });
 
@@ -100,7 +106,10 @@ export class AIService {
               });
             }
 
-            const suggestionComments = this.formatCodeSuggestionsWithKeyIssues(review.codeSuggestions, keyIssuesMap);
+            const suggestionComments = this.formatCodeSuggestionsWithKeyIssues(
+              review.codeSuggestions,
+              keyIssuesMap
+            );
             allComments.push(...suggestionComments);
           }
 
@@ -127,7 +136,7 @@ export class AIService {
       const suggestionKey = `${suggestion.relevantFile}:${suggestion.startLine}`;
       const keyIssue = keyIssuesMap.get(suggestionKey);
 
-      let issueHeader = "";
+      let issueHeader = '';
       let issueContent = suggestion.explanation;
 
       if (keyIssue) {
@@ -141,12 +150,12 @@ export class AIService {
 
 ${issueContent}
 
-${originalCode ? `Current code:\n\`${originalCode}\`` : ""}
+${originalCode ? `Current code:\n\`${originalCode}\`` : ''}
 
 Recommended fix:
 
 \`\`\`diff
-${originalCode ? `- ${originalCode}` : ""}
+${originalCode ? `- ${originalCode}` : ''}
 + ${suggestion.suggestedCode}
 \`\`\`
 
@@ -164,9 +173,18 @@ ${originalCode ? `- ${originalCode}` : ""}
     });
   }
 
-  private async postCommentToGitHub(owner: string, repo: string, prNumber: number, reviewComments: FormattedComment[]) {
+  private async postCommentToGitHub(
+    owner: string,
+    repo: string,
+    prNumber: number,
+    reviewComments: FormattedComment[]
+  ) {
     try {
-      const { data: prData } = await this.octokit.rest.pulls.get({ owner, repo, pull_number: prNumber });
+      const { data: prData } = await this.octokit.rest.pulls.get({
+        owner,
+        repo,
+        pull_number: prNumber,
+      });
       const commitId = prData.head.sha;
 
       const { data: prFiles } = await this.octokit.rest.pulls.listFiles({
@@ -181,7 +199,7 @@ ${originalCode ? `- ${originalCode}` : ""}
         if (!file.patch) continue;
 
         const changedLines = new Set<number>();
-        const patchLines = file.patch.split("\n");
+        const patchLines = file.patch.split('\n');
         let currentLine = 0;
 
         const hunkHeaderMatch = file.patch.match(/@@ -\d+,\d+ \+(\d+),\d+ @@/);
@@ -190,7 +208,7 @@ ${originalCode ? `- ${originalCode}` : ""}
         }
 
         for (const line of patchLines) {
-          if (line.startsWith("@@")) {
+          if (line.startsWith('@@')) {
             const match = line.match(/@@ -\d+,\d+ \+(\d+),\d+ @@/);
             if (match) {
               currentLine = parseInt(match[1], 10);
@@ -198,11 +216,11 @@ ${originalCode ? `- ${originalCode}` : ""}
             continue;
           }
 
-          if (line.startsWith("+") && !line.startsWith("+++")) {
+          if (line.startsWith('+') && !line.startsWith('+++')) {
             changedLines.add(currentLine);
           }
 
-          if (!line.startsWith("-") || line.startsWith("---")) {
+          if (!line.startsWith('-') || line.startsWith('---')) {
             currentLine++;
           }
         }
@@ -242,7 +260,7 @@ ${originalCode ? `- ${originalCode}` : ""}
         const comments = mappedComments.map((comment) => ({
           path: comment.path,
           line: comment.mappedLine,
-          side: "RIGHT",
+          side: 'RIGHT',
           body: comment.body,
         }));
 
@@ -251,7 +269,7 @@ ${originalCode ? `- ${originalCode}` : ""}
           repo,
           pull_number: prNumber,
           commit_id: commitId,
-          event: "COMMENT",
+          event: 'COMMENT',
           comments: comments,
         });
       } catch (reviewError) {
@@ -272,6 +290,7 @@ ${originalCode ? `- ${originalCode}` : ""}
             logger.error(`Failed to post comment ${index + 1}: ${commentError}`);
           }
         }
+        logger.error(`Failed to post review: ${reviewError}`);
       }
     } catch (error) {
       throw new Error(`Error posting comment: ${error}`);
@@ -280,7 +299,7 @@ ${originalCode ? `- ${originalCode}` : ""}
 
   private parseAIResponse(text: string): AIReviewResponse {
     try {
-      const jsonString = text.replace(/```json\n|```/g, "").trim();
+      const jsonString = text.replace(/```json\n|```/g, '').trim();
       const parsedJson = JSON.parse(jsonString) as AIReviewResponse;
 
       if (!parsedJson.review) {
@@ -373,7 +392,7 @@ IMPORTANT GUIDELINES:
 """`;
 
       const { text } = await generateText({
-        model: this.deepseek("deepseek-chat"),
+        model: this.deepseek('deepseek-chat'),
         prompt: `${systemPrompt}\n\n${prompt}`,
         maxTokens: 1000, // Limit response length
       });

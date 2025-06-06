@@ -1,28 +1,62 @@
-import { z } from 'zod';
+/**
+ * Environment configuration with lazy validation
+ * No hardcoded dummy values - validation only happens when variables are accessed
+ */
 
-const envSchema = z.object({
-  GITHUB_APP_CLIENT_ID: z.string().min(1, "GitHub App Client ID is required"),
-  GITHUB_APP_CLIENT_SECRET: z.string().min(1, "GitHub App Client Secret is required"),
-  GITHUB_APP_PRIVATE_KEY: z.string().min(1, "GitHub App Private Key is required"),
-  
-  DATABASE_URL: z.string().min(1, "Database URL is required"),
-  
-  CLERK_SECRET_KEY: z.string().min(1, "Clerk Secret Key is required"),
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1, "Clerk Publishable Key is required"),
-  NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL: z.string().optional(),
-  NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: z.string().optional(),
-  
-  DEEPSEEK_API_KEY: z.string().min(1, "DeepSeek API Key is required"),
-  
-  TRIGGER_SECRET_KEY: z.string().min(1, "Trigger Secret Key is required"),
-});
+/**
+ * Get environment variable with runtime validation
+ * Only validates when actually accessed, not at build time
+ */
+function getEnv(key: string): string {
+  const value = process.env[key];
 
-const parseEnv = () => {
-  try {
-    return envSchema.parse(process.env);
-  } catch (error) {
-    throw new Error("Invalid environment variables");
+  if (!value) {
+    throw new Error(`Environment variable ${key} is required but not set`);
   }
-};
 
-export const env = parseEnv();
+  return value;
+}
+
+/**
+ * Get environment variable with optional fallback
+ */
+function getEnvOptional(key: string, fallback?: string): string | undefined {
+  return process.env[key] ?? fallback;
+}
+
+/**
+ * Environment configuration with lazy validation
+ * Values are only validated when accessed, allowing builds to complete
+ */
+export const env = {
+  get GITHUB_APP_CLIENT_ID() {
+    return getEnv('GITHUB_APP_CLIENT_ID');
+  },
+  get GITHUB_APP_CLIENT_SECRET() {
+    return getEnv('GITHUB_APP_CLIENT_SECRET');
+  },
+  get GITHUB_APP_PRIVATE_KEY() {
+    return getEnv('GITHUB_APP_PRIVATE_KEY');
+  },
+  get DATABASE_URL() {
+    return getEnv('DATABASE_URL');
+  },
+  get CLERK_SECRET_KEY() {
+    return getEnv('CLERK_SECRET_KEY');
+  },
+  get NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY() {
+    return getEnv('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY');
+  },
+  get NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL() {
+    return getEnvOptional('NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL', '/dashboard');
+  },
+  get NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL() {
+    return getEnvOptional('NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL', '/dashboard');
+  },
+  get DEEPSEEK_API_KEY() {
+    return getEnv('DEEPSEEK_API_KEY');
+  },
+  get TRIGGER_SECRET_KEY() {
+    return getEnv('TRIGGER_SECRET_KEY');
+  },
+};

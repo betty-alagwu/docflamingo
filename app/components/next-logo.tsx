@@ -1,6 +1,6 @@
 export function NextLogo() {
   return (
-    <a href="https://nextjs.org/" target="_blank">
+    <a href="https://nextjs.org/" target="_blank" rel="noreferrer">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="24"
@@ -11,7 +11,7 @@ export function NextLogo() {
         <g clipPath="url(#clip0_29_46694)">
           <mask
             id="mask0_29_46694"
-            style={{ maskType: "alpha" }}
+            style={{ maskType: 'alpha' }}
             width="24"
             height="24"
             x="0"
@@ -32,10 +32,7 @@ export function NextLogo() {
               fill="url(#paint0_linear_29_46694)"
               d="M19.935 21.003L9.219 7.2H7.2v9.596h1.615V9.251l9.852 12.728c.444-.297.868-.624 1.268-.976z"
             ></path>
-            <path
-              fill="url(#paint1_linear_29_46694)"
-              d="M16.934 7.2h-1.6v9.6h1.6V7.2z"
-            ></path>
+            <path fill="url(#paint1_linear_29_46694)" d="M16.934 7.2h-1.6v9.6h1.6V7.2z"></path>
           </g>
         </g>
         <defs>

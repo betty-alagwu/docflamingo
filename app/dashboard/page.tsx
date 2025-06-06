@@ -1,12 +1,9 @@
-import { UserDetails } from "../components/user-details";
-import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
-import { CodeSwitcher } from "../components/code-switcher";
-import { LearnMore } from "../components/learn-more";
-import { Footer } from "../components/footer";
-import { ClerkLogo } from "../components/clerk-logo";
-import { NextLogo } from "../components/next-logo";
+import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
 
-import { DASHBOARD_CARDS } from "../consts/cards";
+import { ClerkLogo } from '../components/clerk-logo';
+import { CodeSwitcher } from '../components/code-switcher';
+import { NextLogo } from '../components/next-logo';
+import { UserDetails } from '../components/user-details';
 
 export default async function DashboardPage() {
   return (
@@ -24,15 +21,14 @@ export default async function DashboardPage() {
                 <OrganizationSwitcher
                   appearance={{
                     elements: {
-                      organizationPreviewAvatarBox: "size-6",
+                      organizationPreviewAvatarBox: 'size-6',
                     },
                   }}
                 />
                 <UserButton
-                  afterSignOutUrl="/"
                   appearance={{
                     elements: {
-                      userButtonAvatarBox: "size-6",
+                      userButtonAvatarBox: 'size-6',
                     },
                   }}
                 />
@@ -45,7 +41,9 @@ export default async function DashboardPage() {
           </div>
         </div>
       </main>
-      <a href="https://github.com/apps/docflamingo-app/installations/select_target">Add repositories</a>
+      <a href="https://github.com/apps/docflamingo-app/installations/select_target">
+        Add repositories
+      </a>
     </>
   );
 }

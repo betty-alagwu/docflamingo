@@ -1,10 +1,10 @@
-import { ProcessReopenedPullRequestService } from '@/app/services/process-reopened-pull-request.service';
-import { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
-import { GithubService } from '@/app/services/git-providers/github.service';
-import { App } from 'octokit';
-import { prisma } from '@/app/database/prisma';
 import { logger } from '@trigger.dev/sdk/v3';
-import { TokenHandler } from '@/app/services/token-handler.service';
+
+import { prisma } from '@/app/database/prisma';
+import { GithubService } from '@/app/services/git-providers/github.service';
+import { ProcessReopenedPullRequestService } from '@/app/services/process-reopened-pull-request.service';
+
+import type { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
 
 // Mock environment variables
 jest.mock('@/app/config/env', () => ({
@@ -12,22 +12,22 @@ jest.mock('@/app/config/env', () => ({
     GITHUB_APP_CLIENT_ID: 'test-client-id',
     GITHUB_APP_PRIVATE_KEY: 'test-private-key',
     TRIGGER_SECRET_KEY: 'test-trigger-secret-key',
-    DEEPSEEK_API_KEY: 'test-deepseek-api-key'
-  }
+    DEEPSEEK_API_KEY: 'test-deepseek-api-key',
+  },
 }));
 
 // Mock getPullRequestDetails
 jest.mock('@/app/utils/get-pull-request-details', () => ({
   getPullRequestDetails: jest.fn().mockResolvedValue({
     title: 'Test PR Title',
-    body: 'Test PR Body'
-  })
+    body: 'Test PR Body',
+  }),
 }));
 
 jest.mock('@/app/services/git-providers/github.service', () => {
   const mockAIService = {
     getSystemPrompt: jest.fn().mockReturnValue('Mock system prompt'),
-    analyzePullRequest: jest.fn().mockResolvedValue(undefined)
+    analyzePullRequest: jest.fn().mockResolvedValue(undefined),
   };
 
   return {
@@ -36,8 +36,8 @@ jest.mock('@/app/services/git-providers/github.service', () => {
       analyzePullRequestWithLLM: jest.fn().mockResolvedValue(undefined),
       getDiffFiles: jest.fn().mockResolvedValue([{ filename: 'test.ts', patch: 'test patch' }]),
       payload: payload,
-      aiService: mockAIService
-    }))
+      aiService: mockAIService,
+    })),
   };
 });
 
@@ -50,20 +50,20 @@ jest.mock('octokit', () => {
             get: jest.fn().mockResolvedValue({
               data: {
                 title: 'Test PR',
-                merged: false
-              }
-            })
+                merged: false,
+              },
+            }),
           },
           repos: {
             compareCommitsWithBasehead: jest.fn().mockResolvedValue({
               data: {
-                files: [{ filename: 'test.ts', status: 'modified' }]
-              }
-            })
-          }
-        }
-      })
-    }))
+                files: [{ filename: 'test.ts', status: 'modified' }],
+              },
+            }),
+          },
+        },
+      }),
+    })),
   };
 });
 
@@ -73,7 +73,7 @@ jest.mock('@/app/database/prisma', () => {
     status: 'open',
     headSha: 'old-head-sha',
     reviewedFiles: ['test.ts'],
-    triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2']
+    triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2'],
   };
 
   return {
@@ -81,8 +81,8 @@ jest.mock('@/app/database/prisma', () => {
       installation: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'installation-id',
-          customerId: 'customer-id'
-        })
+          customerId: 'customer-id',
+        }),
       },
       job: {
         findFirst: jest.fn(),
@@ -90,32 +90,32 @@ jest.mock('@/app/database/prisma', () => {
           return Promise.resolve({
             id: 'new-job-id',
             ...data.data,
-            status: 'open'
+            status: 'open',
           });
         }),
         update: jest.fn().mockImplementation((data) => {
           return Promise.resolve({
             ...mockExistingJob,
-            ...data.data
+            ...data.data,
           });
-        })
-      }
-    }
+        }),
+      },
+    },
   };
 });
 
 jest.mock('@trigger.dev/sdk/v3', () => ({
   logger: {
     info: jest.fn(),
-    error: jest.fn()
-  }
+    error: jest.fn(),
+  },
 }));
 
 jest.mock('@/app/services/token-handler.service', () => {
   return {
     TokenHandler: jest.fn().mockImplementation(() => ({
-      processFiles: jest.fn().mockResolvedValue('Processed diff content')
-    }))
+      processFiles: jest.fn().mockResolvedValue('Processed diff content'),
+    })),
   };
 });
 
@@ -133,18 +133,18 @@ describe('ProcessReopenedPullRequestService', () => {
         id: 123,
         name: 'test-repo',
         owner: {
-          login: 'test-owner'
-        }
+          login: 'test-owner',
+        },
       },
       installation: {
-        id: 12345
+        id: 12345,
       },
       head: {
-        sha: 'new-head-sha'
+        sha: 'new-head-sha',
       },
       base: {
-        sha: 'base-sha'
-      }
+        sha: 'base-sha',
+      },
     } as ProcessPullRequestWebhookTaskPayload;
 
     service = new ProcessReopenedPullRequestService();
@@ -163,8 +163,8 @@ describe('ProcessReopenedPullRequestService', () => {
         data: expect.objectContaining({
           githubRepositoryId: 123,
           githubPullRequestId: 1,
-          status: 'open'
-        })
+          status: 'open',
+        }),
       })
     );
     expect(GithubService).toHaveBeenCalledWith(mockPayload);
@@ -177,7 +177,7 @@ describe('ProcessReopenedPullRequestService', () => {
     (prisma.job.findFirst as jest.Mock).mockResolvedValueOnce({
       id: 'job-id',
       headSha: 'new-head-sha', // Same as the current head SHA
-      reviewedFiles: ['test.ts']
+      reviewedFiles: ['test.ts'],
     });
 
     // Act
@@ -189,8 +189,8 @@ describe('ProcessReopenedPullRequestService', () => {
       data: expect.objectContaining({
         status: 'open',
         closedAt: null,
-        mergedAt: null
-      })
+        mergedAt: null,
+      }),
     });
 
     const mockGithubServiceInstance = (GithubService as jest.Mock).mock.results[0].value;
@@ -202,7 +202,7 @@ describe('ProcessReopenedPullRequestService', () => {
     (prisma.job.findFirst as jest.Mock).mockResolvedValueOnce({
       id: 'job-id',
       headSha: 'old-head-sha', // Different from the current head SHA
-      reviewedFiles: []
+      reviewedFiles: [],
     });
 
     // Act
@@ -215,15 +215,15 @@ describe('ProcessReopenedPullRequestService', () => {
         data: expect.objectContaining({
           status: 'open',
           headSha: 'new-head-sha',
-          reviewedFiles: expect.any(Array)
-        })
+          reviewedFiles: expect.any(Array),
+        }),
       })
     );
 
     const mockGithubServiceInstance = (GithubService as jest.Mock).mock.results[0].value;
     expect(mockGithubServiceInstance.analyzePullRequestWithLLM).not.toHaveBeenCalled();
 
-    const tokenHandlerMock = require('@/app/services/token-handler.service').TokenHandler;
+    const tokenHandlerMock = jest.requireMock('@/app/services/token-handler.service').TokenHandler;
     expect(tokenHandlerMock).toHaveBeenCalled();
     expect(tokenHandlerMock.mock.results[0].value.processFiles).toHaveBeenCalled();
 
@@ -257,8 +257,8 @@ describe('ProcessReopenedPullRequestService', () => {
     expect(prisma.job.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          triggerTaskIds: []
-        })
+          triggerTaskIds: [],
+        }),
       })
     );
   });
@@ -269,7 +269,7 @@ describe('ProcessReopenedPullRequestService', () => {
       id: 'job-id',
       headSha: 'new-head-sha', // Same as the current head SHA
       reviewedFiles: ['test.ts'],
-      triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2']
+      triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2'],
     };
 
     (prisma.job.findFirst as jest.Mock).mockResolvedValueOnce(mockExistingJob);
@@ -282,8 +282,8 @@ describe('ProcessReopenedPullRequestService', () => {
       expect.objectContaining({
         where: { id: 'job-id' },
         data: expect.objectContaining({
-          triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2']
-        })
+          triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2'],
+        }),
       })
     );
   });
@@ -294,7 +294,7 @@ describe('ProcessReopenedPullRequestService', () => {
       id: 'job-id',
       headSha: 'old-head-sha', // Different from the current head SHA
       reviewedFiles: ['test.ts'],
-      triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2']
+      triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2'],
     };
 
     (prisma.job.findFirst as jest.Mock).mockResolvedValueOnce(mockExistingJob);
@@ -307,8 +307,8 @@ describe('ProcessReopenedPullRequestService', () => {
       expect.objectContaining({
         where: { id: 'job-id' },
         data: expect.objectContaining({
-          triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2']
-        })
+          triggerTaskIds: ['existing-task-id-1', 'existing-task-id-2'],
+        }),
       })
     );
   });
@@ -318,7 +318,7 @@ describe('ProcessReopenedPullRequestService', () => {
     const mockExistingJobWithoutTaskIds = {
       id: 'job-id',
       headSha: 'old-head-sha',
-      reviewedFiles: ['test.ts']
+      reviewedFiles: ['test.ts'],
     };
 
     (prisma.job.findFirst as jest.Mock).mockResolvedValueOnce(mockExistingJobWithoutTaskIds);
@@ -331,8 +331,8 @@ describe('ProcessReopenedPullRequestService', () => {
       expect.objectContaining({
         where: { id: 'job-id' },
         data: expect.objectContaining({
-          triggerTaskIds: []
-        })
+          triggerTaskIds: [],
+        }),
       })
     );
   });
