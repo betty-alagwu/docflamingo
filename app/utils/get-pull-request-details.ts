@@ -23,7 +23,6 @@ export async function getPullRequestDetails(
       pull_number: payload.number,
     });
 
-    // Validate the pull request data against our schema
     const pullRequest = githubPullRequestSchema.parse(pullRequestData);
     return pullRequest;
   } catch (error) {
