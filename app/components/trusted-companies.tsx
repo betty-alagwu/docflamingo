@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export interface Company {
   id: string;
@@ -90,10 +90,23 @@ export default function TrustedCompanies({
             onMouseLeave={() => showOnHover && setIsPaused(false)}
           >
             {duplicatedCompanies.map((company, index) => (
-              <div
+              <button
                 key={`${company.id}-${index}`}
                 className="flex-shrink-0 flex items-center justify-center p-6 md:p-8 lg:p-10 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300 group cursor-pointer min-w-[200px] md:min-w-[240px] lg:min-w-[280px]"
-                onClick={() => company.website && window.open(company.website, '_blank')}
+                onClick={() => {
+                  if (company.website) {
+                    window.open(company.website, '_blank');
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (company.website) {
+                      window.open(company.website, '_blank');
+                    }
+                  }
+                }}
+                aria-label={`Visit ${company.name} website`}
               >
                 {company.logo.startsWith('<svg') ? (
                   <div
@@ -107,7 +120,7 @@ export default function TrustedCompanies({
                     className="h-10 md:h-12 lg:h-14 w-auto object-contain filter brightness-0 invert opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110"
                   />
                 )}
-              </div>
+              </button>
             ))}
           </div>
         </div>

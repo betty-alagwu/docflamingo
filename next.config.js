@@ -17,6 +17,12 @@ let nextConfig = {
     ],
   },
   reactStrictMode: true,
+  compiler: {
+    styledComponents: true,
+  },
+  experimental: {
+    styledComponents: true,
+  },
 };
 
 // If a custom config file is specified and exists, use it

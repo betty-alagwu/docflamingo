@@ -1,4 +1,4 @@
-import { Company } from '../components/trusted-companies';
+import type { Company } from '../components/trusted-companies';
 
 export const trustedCompanies: Company[] = [
   {

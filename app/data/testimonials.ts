@@ -1,4 +1,4 @@
-import { Testimonial } from '../components/testimonial-carousel';
+import type { Testimonial } from '../components/testimonial-carousel';
 
 export const testimonials: Testimonial[] = [
   {
@@ -53,7 +53,7 @@ export const testimonials: Testimonial[] = [
     avatar:
       'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
     content:
-      "The best part is how it learns from our codebase patterns. The more we use it, the better the suggestions become. It's like having a senior developer on every PR.",
+      'The best part is how it learns from our codebase patterns. The more we use it, the better the suggestions become. It&quot;s like having a senior developer on every PR.',
     rating: 5,
   },
 ];

@@ -1,11 +1,11 @@
 import './home.css';
 
 import { Footer } from './components/footer';
-import Button from './components/ui/button';
 import TestimonialCarousel from './components/testimonial-carousel';
-import { testimonials } from './data/testimonials';
 import TrustedCompanies from './components/trusted-companies';
+import Button from './components/ui/button';
 import { trustedCompanies } from './data/companies';
+import { testimonials } from './data/testimonials';
 
 export default function Home() {
   return (
