@@ -1,112 +1,138 @@
-import { SignInButton, SignedIn, SignedOut } from '@clerk/nextjs';
-import Image from 'next/image';
-import Link from 'next/link';
-
 import './home.css';
 
-import { ClerkLogo } from './components/clerk-logo';
 import { Footer } from './components/footer';
-import { LearnMore } from './components/learn-more';
-import { NextLogo } from './components/next-logo';
-import { CARDS } from './consts/cards';
-import logo from './images/logo.png';
-import signIn from './images/sign-in@2xrl.webp';
-import signUp from './images/sign-up@2xrl.webp';
-import userButton2 from './images/user-button-2@2xrl.webp';
-import screenshotDevices from './images/user-button@2xrl.webp';
-import verify from './images/verify@2xrl.webp';
+import Button from './components/ui/button';
+import TestimonialCarousel from './components/testimonial-carousel';
+import { testimonials } from './data/testimonials';
+import TrustedCompanies from './components/trusted-companies';
+import { trustedCompanies } from './data/companies';
 
 export default function Home() {
   return (
-    <>
-      <main className="bg-[#FAFAFA] relative">
-        <div className="w-full bg-white max-w-[75rem] mx-auto flex flex-col border-l border-r border-[#F2F2F2] row-span-3">
-          <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px bg-[#F2F2F2]" />
-          <Image
-            alt="Device"
-            className="size-64 bg-transparent absolute left-1/2 -translate-x-[23.75rem] -top-6 h-[51.375rem] object-contain w-[39.0625rem]"
-            src={logo}
-            unoptimized
-          />
-
-          <div className="px-12 py-16 border-b border-[#F2F2F4]">
-            <div className="bg-[#F4F4F5] px-4 py-3 rounded-full inline-flex gap-4">
-              <ClerkLogo />
-              <div aria-hidden className="w-px h-6 bg-[#C7C7C8]" />
-              <NextLogo />
+    <div className="bg-black w-full min-h-screen">
+      <main className="max-w-[75rem] mx-auto py-3 sm:py-5 px-4 sm:px-6 lg:px-8">
+        <div>
+          <header className="flex items-center justify-between w-full relative">
+            <div className="flex gap-2 sm:gap-4">
+              <a
+                href="/docs"
+                className="text-sm sm:text-lg text-gray-400 font-medium hover:text-grey-header leading-7"
+              >
+                Docs
+              </a>
             </div>
-          </div>
 
-          <div className="p-10 border-b border-[#F2F2F2]">
-            <h1 className="text-5xl font-bold tracking-tight text-[#131316] relative">
-              Auth starts here
+            <div className="absolute right-0 sm:left-1/2 lg:left-[36rem] top-1/2 sm:-translate-x-1/2 -translate-y-1/2">
+              <div className="">
+                <div className="w-4 h-4 bg-white rounded-sm relative z-10 shadow-[0_0_20px_rgba(255,255,255,0.8)] sm:left-1/2  sm:-translate-x-1/2"></div>
+              </div>
+
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-20 bg-gradient-to-b from-white/70 via-white/40 to-transparent blur-md"></div>
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-32 bg-gradient-to-b from-white/40 via-white/20 to-transparent blur-md"></div>
+              <div className="absolute top-6 left-1/2 -translate-x-1/2 w-32 h-48 bg-gradient-to-b from-white/25 via-white/10 to-transparent blur-lg"></div>
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 w-48 h-64 bg-gradient-to-b from-white/15 via-white/5 to-transparent blur-xl"></div>
+            </div>
+
+            <div className="hidden sm:flex items-center gap-4 sm:gap-6 lg:gap-10">
+              <button className="text-gray-400 transition-all hover:text-grey-header text-sm sm:text-lg font-medium leading-7">
+                Log in
+              </button>
+
+              <Button variant="primary" dimension="md">
+                Start for free
+              </Button>
+            </div>
+          </header>
+          <div className="text-center pt-20 sm:pt-28 md:pt-32 lg:pt-36">
+            <h1 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light capitalize">
+              Code Review
             </h1>
-
-            <p className="text-[#5E5F6E] pt-3 pb-6 max-w-[30rem] text-[1.0625rem] relative">
-              A simple and powerful Next.js template featuring authentication and user management
-              powered by Clerk.
+            <h1 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light capitalize">
+              Made Easy For You
+            </h1>
+            <p className="text-gray-300 text-center text-base sm:text-lg md:text-xl max-w-sm mx-auto mt-6 sm:mt-8">
+              Revlo helps modern software teams ship higher-quality code, 3x faster.
             </p>
-            <div className="relative flex gap-3">
-              <SignedIn>
-                <Link
-                  href="/dashboard"
-                  className="px-4 py-2 rounded-full bg-[#131316] text-white text-sm font-semibold"
-                >
-                  Dashboard
-                </Link>
-              </SignedIn>
-              <SignedOut>
-                <SignInButton>
-                  <button className="px-4 py-2 rounded-full bg-[#131316] text-white text-sm font-semibold">
-                    Sign in
-                  </button>
-                </SignInButton>
-              </SignedOut>
-            </div>
-          </div>
-          <div className="flex gap-8 w-full h-[41.25rem] scale-[1.03]">
-            <div className="space-y-8 translate-y-12">
-              <Image
-                alt="Device"
-                src={signUp}
-                unoptimized
-                className="flex-none rounded-xl bg-white shadow-[0_5px_15px_rgba(0,0,0,0.08),0_15px_35px_-5px_rgba(25,28,33,0.2)] ring-1 ring-gray-950/5"
+            <Button variant="primary" dimension="md" className="mt-6 sm:mt-8">
+              Get started for free
+            </Button>
+            <div className="flex items-center justify-center text-center pt-10">
+              <img
+                src="https://framerusercontent.com/images/ythxKCuT8XMplgloTlIu0Qmvb0.png?scale-down-to=512"
+                alt=""
+                className="w-50 h-40"
               />
             </div>
-            <div className="space-y-8 -translate-y-4">
-              <Image
-                alt="Device"
-                src={verify}
-                unoptimized
-                className="flex-none rounded-xl bg-white shadow-[0_5px_15px_rgba(0,0,0,0.08),0_15px_35px_-5px_rgba(25,28,33,0.2)] ring-1 ring-gray-950/5"
-              />
-              <Image
-                alt="Device"
-                src={userButton2}
-                unoptimized
-                className="flex-none rounded-xl bg-white shadow-[0_5px_15px_rgba(0,0,0,0.08),0_15px_35px_-5px_rgba(25,28,33,0.2)] ring-1 ring-gray-950/5"
-              />
-            </div>
-            <div className="space-y-8 -translate-y-[22.5rem]">
-              <Image
-                alt="Device"
-                src={signIn}
-                unoptimized
-                className="flex-none rounded-xl bg-white shadow-[0_5px_15px_rgba(0,0,0,0.08),0_15px_35px_-5px_rgba(25,28,33,0.2)] ring-1 ring-gray-950/5"
-              />
-              <Image
-                alt="Device"
-                src={screenshotDevices}
-                unoptimized
-                className="flex-none rounded-xl bg-white shadow-[0_5px_15px_rgba(0,0,0,0.08),0_15px_35px_-5px_rgba(25,28,33,0.2)] ring-1 ring-gray-950/5"
-              />
+            <div className="flex justify-center items-center flex-none flex-row gap-2.5 min-h-fit overflow-hidden relative w-full pt-16">
+              <div className="flex flex-col flex-nowrap flex-1 justify-center relative items-center gap-2.5 w-full max-w-[67rem] mx-auto p-10">
+                <div className="absolute inset-0">
+                  <img
+                    src="https://framerusercontent.com/images/ClYv9ceke1tpVItSrjAWLZdZMM.png?scale-down-to=512"
+                    alt="Hero"
+                    className="block w-full h-full object-cover object-center rounded-2xl"
+                  />
+                </div>
+                <div className="rounded-xl relative w-full max-w-[90vw] sm:max-w-[85vw] md:max-w-[75vw] lg:max-w-[993px] mx-auto">
+                  <div className="w-full">
+                    <img
+                      src="https://res.cloudinary.com/dq5e0bbl8/image/upload/v1753286267/Screenshot_2025-07-23_at_4.57.35_PM_kulzrw.png"
+                      alt="Hero"
+                      className="block w-full h-auto object-cover object-center rounded-2xl min-h-[250px] sm:min-h-[30px] md:min-h-[400px] lg:min-h-[400px] "
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div className="absolute left-0 right-0 bottom-0 h-[18.75rem] bg-gradient-to-t from-white" />
+
+        <section className="py-16 sm:py-20 md:py-24 lg:py-32">
+          <div className="text-center mb-12 sm:mb-16 md:mb-20">
+            <h2 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light mb-4 sm:mb-6">
+              What Developers Say
+            </h2>
+            <p className="text-gray-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto px-4">
+              Join thousands of developers who trust DocFlamingo to improve their code quality
+            </p>
+          </div>
+
+          <TestimonialCarousel
+            testimonials={testimonials}
+            autoPlay={true}
+            autoPlayInterval={6000}
+            showDots={true}
+            showArrows={true}
+            className="mb-8 sm:mb-12"
+          />
+        </section>
+
+        <TrustedCompanies
+          companies={trustedCompanies}
+          title="Trusted by the best engineering teams"
+          subtitle="Join thousands of developers and engineering teams who rely on DocFlamingo for better code reviews"
+          autoScroll={true}
+          scrollSpeed={40}
+          showOnHover={true}
+        />
+
+        <div className="flex flex-col items-center justify-center text-center pt-32 max-w-[700px] mx-auto w-full">
+          <h1 className="text-white text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light">
+            Built to make you extraordinarily productive
+          </h1>
+          <Button variant="primary" dimension="md" className="mt-12 lg:mt-16">
+            Get started for free
+          </Button>
+          <div className="flex items-center justify-center text-center pt-4">
+            <img
+              src="https://framerusercontent.com/images/ythxKCuT8XMplgloTlIu0Qmvb0.png?scale-down-to=512"
+              alt=""
+              className="w-80 h-50"
+            />
+          </div>
+        </div>
       </main>
-      <LearnMore cards={CARDS} />
+
       <Footer />
-    </>
+    </div>
   );
 }

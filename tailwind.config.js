@@ -13,6 +13,11 @@ module.exports = {
         'primary-50': '#F4F2FF',
         'success-700': '#027A48',
         'success-50': '#ECFDF3',
+        support: '#55586F',
+        grey: {
+          light: '#E5E5E5',
+          header: '#FBFBFB',
+        },
       },
       fontFamily: {
         sans: ['var(--font-geist-sans)'],
