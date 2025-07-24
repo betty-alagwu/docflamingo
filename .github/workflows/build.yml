@@ -21,10 +21,7 @@ jobs:
       - name: checkout code
         uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Prepare Husky
-        run: npm run prepare
+      - uses: ./.github/actions/install-dependencies
       - uses: ./.github/actions/run-command
         with:
           name: build project
