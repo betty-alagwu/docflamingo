@@ -14,6 +14,31 @@ let nextConfig = {
         hostname: 'img.clerk.com',
         port: '',
       },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.jsdelivr.net',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'boring.withmono.com',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'framerusercontent.com',
+        port: '',
+      },
     ],
   },
   reactStrictMode: true,

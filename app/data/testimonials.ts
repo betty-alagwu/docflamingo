@@ -1,4 +1,4 @@
-import { Testimonial } from '../components/testimonial-carousel';
+import type { Testimonial } from '../components/testimonial-carousel';
 
 export const testimonials: Testimonial[] = [
   {

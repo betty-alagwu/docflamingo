@@ -1,11 +1,13 @@
 import './home.css';
 
+import Image from 'next/image';
+
 import { Footer } from './components/footer';
-import Button from './components/ui/button';
 import TestimonialCarousel from './components/testimonial-carousel';
-import { testimonials } from './data/testimonials';
 import TrustedCompanies from './components/trusted-companies';
+import Button from './components/ui/button';
 import { trustedCompanies } from './data/companies';
+import { testimonials } from './data/testimonials';
 
 export default function Home() {
   return (
@@ -57,26 +59,31 @@ export default function Home() {
               Get started for free
             </Button>
             <div className="flex items-center justify-center text-center pt-10">
-              <img
+              <Image
                 src="https://framerusercontent.com/images/ythxKCuT8XMplgloTlIu0Qmvb0.png?scale-down-to=512"
                 alt=""
+                width={200}
+                height={160}
                 className="w-50 h-40"
               />
             </div>
             <div className="flex justify-center items-center flex-none flex-row gap-2.5 min-h-fit overflow-hidden relative w-full pt-16">
               <div className="flex flex-col flex-nowrap flex-1 justify-center relative items-center gap-2.5 w-full max-w-[67rem] mx-auto p-10">
                 <div className="absolute inset-0">
-                  <img
+                  <Image
                     src="https://framerusercontent.com/images/ClYv9ceke1tpVItSrjAWLZdZMM.png?scale-down-to=512"
                     alt="Hero"
+                    fill
                     className="block w-full h-full object-cover object-center rounded-2xl"
                   />
                 </div>
                 <div className="rounded-xl relative w-full max-w-[90vw] sm:max-w-[85vw] md:max-w-[75vw] lg:max-w-[993px] mx-auto">
                   <div className="w-full">
-                    <img
+                    <Image
                       src="https://res.cloudinary.com/dq5e0bbl8/image/upload/v1753286267/Screenshot_2025-07-23_at_4.57.35_PM_kulzrw.png"
                       alt="Hero"
+                      width={1200}
+                      height={800}
                       className="block w-full h-auto object-cover object-center rounded-2xl min-h-[250px] sm:min-h-[30px] md:min-h-[400px] lg:min-h-[400px] "
                     />
                   </div>
@@ -123,9 +130,11 @@ export default function Home() {
             Get started for free
           </Button>
           <div className="flex items-center justify-center text-center pt-4">
-            <img
+            <Image
               src="https://framerusercontent.com/images/ythxKCuT8XMplgloTlIu0Qmvb0.png?scale-down-to=512"
               alt=""
+              width={320}
+              height={200}
               className="w-80 h-50"
             />
           </div>
