@@ -88,6 +88,8 @@ export class AIService {
       const { text } = await generateText({
         model: this.deepseek('deepseek-chat'),
         prompt: `${systemPrompt}\n\n${userPrompt}`,
+        maxTokens: 1000, // Limit response length
+        temperature: 0.7,
       });
 
       if (text) {
@@ -376,8 +378,6 @@ Ensure the JSON output is well-formatted and includes all necessary fields as sp
 
   public async generateCommentResponse(prompt: string): Promise<string> {
     try {
-      logger.info('🤖 Starting AI comment response generation...');
-
       const systemPrompt = `system="""You are an AI assistant helping with code-related questions in a GitHub pull request.
 Your task is to provide helpful, accurate, and concise responses to user questions.
 Be friendly and professional in your responses.
@@ -393,26 +393,16 @@ IMPORTANT GUIDELINES:
 7. Just answer the question directly without unnecessary preamble
 """`;
 
-      logger.info('🔗 Calling DeepSeek API for comment response...');
-      const startTime = Date.now();
-
       const { text } = await generateText({
         model: this.deepseek('deepseek-chat'),
         prompt: `${systemPrompt}\n\n${prompt}`,
         maxTokens: 1000, // Limit response length
+        temperature: 0.7,
       });
-
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-
-      logger.info(
-        `✅ AI response generated successfully in ${duration}ms. Response length: ${text.length} characters`
-      );
 
       return text;
     } catch (error) {
-      logger.error(`❌ Error generating comment response: ${error}`);
-      logger.error(`❌ Error details: ${JSON.stringify(error, null, 2)}`);
+      logger.error(`Error generating comment response: ${error}`);
       throw new Error(`Error generating comment response: ${error}`);
     }
   }
