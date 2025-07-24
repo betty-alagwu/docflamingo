@@ -88,6 +88,8 @@ export class AIService {
       const { text } = await generateText({
         model: this.deepseek('deepseek-chat'),
         prompt: `${systemPrompt}\n\n${userPrompt}`,
+        maxTokens: 1000, // Limit response length
+        temperature: 0.7,
       });
 
       if (text) {
@@ -395,6 +397,7 @@ IMPORTANT GUIDELINES:
         model: this.deepseek('deepseek-chat'),
         prompt: `${systemPrompt}\n\n${prompt}`,
         maxTokens: 1000, // Limit response length
+        temperature: 0.7,
       });
 
       return text;

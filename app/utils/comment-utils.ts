@@ -2,10 +2,7 @@ import { logger } from '@trigger.dev/sdk/v3';
 
 import type { Comment, CommentWebhookPayload } from '../interfaces/comment-handler.interface';
 
-/**
- * List of bot usernames that might be used by the AI or other systems
- */
-export const BOT_USERNAMES = ['docflamingo-app', 'docflamingo-app[bot]', 'docflamingo'];
+export const BOT_USERNAMES = ['revlo-ai', 'revlo-ai[bot]', 'docflamingo-app[bot]', 'docflamingo'];
 
 /**
  * Check if a comment is from the AI bot

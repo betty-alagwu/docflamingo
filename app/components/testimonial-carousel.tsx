@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
 export interface Testimonial {
@@ -37,9 +38,7 @@ export default function TestimonialCarousel({
     if (!isAutoPlaying) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => 
-        prevIndex === testimonials.length - 1 ? 0 : prevIndex + 1
-      );
+      setCurrentIndex((prevIndex) => (prevIndex === testimonials.length - 1 ? 0 : prevIndex + 1));
     }, autoPlayInterval);
 
     return () => clearInterval(interval);
@@ -68,9 +67,7 @@ export default function TestimonialCarousel({
     return Array.from({ length: 5 }, (_, i) => (
       <svg
         key={i}
-        className={`w-4 h-4 sm:w-5 sm:h-5 ${
-          i < rating ? 'text-yellow-400' : 'text-gray-300'
-        }`}
+        className={`w-4 h-4 sm:w-5 sm:h-5 ${i < rating ? 'text-yellow-400' : 'text-gray-300'}`}
         fill="currentColor"
         viewBox="0 0 20 20"
       >
@@ -88,33 +85,30 @@ export default function TestimonialCarousel({
       {/* Main carousel container */}
       <div className="relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10">
         {/* Testimonial cards */}
-        <div 
+        <div
           className="flex transition-transform duration-500 ease-in-out"
           style={{ transform: `translateX(-${currentIndex * 100}%)` }}
         >
           {testimonials.map((testimonial) => (
-            <div
-              key={testimonial.id}
-              className="w-full flex-shrink-0 p-6 sm:p-8 md:p-12"
-            >
+            <div key={testimonial.id} className="w-full flex-shrink-0 p-6 sm:p-8 md:p-12">
               <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6">
                 {/* Avatar */}
                 <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-white/20">
-                  <img
+                  <Image
                     src={testimonial.avatar}
                     alt={testimonial.name}
+                    width={96}
+                    height={96}
                     className="w-full h-full object-cover"
                   />
                 </div>
 
                 {/* Rating */}
-                <div className="flex space-x-1">
-                  {renderStars(testimonial.rating)}
-                </div>
+                <div className="flex space-x-1">{renderStars(testimonial.rating)}</div>
 
                 {/* Content */}
                 <blockquote className="text-white text-base sm:text-lg md:text-xl lg:text-2xl font-light leading-relaxed max-w-4xl">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </blockquote>
 
                 {/* Author info */}
@@ -139,8 +133,18 @@ export default function TestimonialCarousel({
               className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 group"
               aria-label="Previous testimonial"
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:text-white/90"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
             <button
@@ -148,8 +152,18 @@ export default function TestimonialCarousel({
               className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 group"
               aria-label="Next testimonial"
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white group-hover:text-white/90"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </>
@@ -164,9 +178,7 @@ export default function TestimonialCarousel({
               key={index}
               onClick={() => goToSlide(index)}
               className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-200 ${
-                index === currentIndex
-                  ? 'bg-white scale-125'
-                  : 'bg-white/40 hover:bg-white/60'
+                index === currentIndex ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/60'
               }`}
               aria-label={`Go to testimonial ${index + 1}`}
             />

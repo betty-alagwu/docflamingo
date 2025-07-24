@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { useState } from 'react';
 
 export interface Company {
   id: string;
@@ -65,9 +66,11 @@ export default function TrustedCompanies({
                     className="h-8 sm:h-10 md:h-12 w-auto text-white opacity-60 group-hover:opacity-100 transition-opacity duration-300"
                   />
                 ) : (
-                  <img
+                  <Image
                     src={company.logoLight || company.logo}
                     alt={`${company.name} logo`}
+                    width={48}
+                    height={48}
                     className="h-8 sm:h-10 md:h-12 w-auto object-contain filter brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity duration-300"
                   />
                 )}
@@ -90,10 +93,23 @@ export default function TrustedCompanies({
             onMouseLeave={() => showOnHover && setIsPaused(false)}
           >
             {duplicatedCompanies.map((company, index) => (
-              <div
+              <button
                 key={`${company.id}-${index}`}
                 className="flex-shrink-0 flex items-center justify-center p-6 md:p-8 lg:p-10 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300 group cursor-pointer min-w-[200px] md:min-w-[240px] lg:min-w-[280px]"
-                onClick={() => company.website && window.open(company.website, '_blank')}
+                onClick={() => {
+                  if (company.website) {
+                    window.open(company.website, '_blank');
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (company.website) {
+                      window.open(company.website, '_blank');
+                    }
+                  }
+                }}
+                aria-label={`Visit ${company.name} website`}
               >
                 {company.logo.startsWith('<svg') ? (
                   <div
@@ -101,13 +117,15 @@ export default function TrustedCompanies({
                     className="h-10 md:h-12 lg:h-14 w-auto text-white opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110"
                   />
                 ) : (
-                  <img
+                  <Image
                     src={company.logoLight || company.logo}
                     alt={`${company.name} logo`}
+                    width={56}
+                    height={56}
                     className="h-10 md:h-12 lg:h-14 w-auto object-contain filter brightness-0 invert opacity-60 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110"
                   />
                 )}
-              </div>
+              </button>
             ))}
           </div>
         </div>

@@ -1,7 +1,7 @@
-import React from 'react';
 import { clsx } from 'clsx';
+import React, { type ButtonHTMLAttributes } from 'react';
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;
   href?: string;
   dimension?: 'xs' | 'sm' | 'midi' | 'md' | 'lg';

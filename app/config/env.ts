@@ -6,11 +6,16 @@
 /**
  * Get environment variable with runtime validation
  * Only validates when actually accessed, not at build time
+ * In CI environments, returns empty string to allow builds to complete
  */
 function getEnv(key: string): string {
   const value = process.env[key];
 
   if (!value) {
+    // Allow builds to complete in CI environments
+    if (process.env.CI === 'true') {
+      return '';
+    }
     throw new Error(`Environment variable ${key} is required but not set`);
   }
 
