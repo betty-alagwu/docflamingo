@@ -20,7 +20,7 @@
     "test:coverage": "jest --coverage",
     "typecheck": "tsc --noEmit",
     "check-licenses": "license-checker --production --onlyAllow \"MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause;CC0-1.0;0BSD;Unlicense\" --excludePrivatePackages",
-    "prepare": "husky"
+    "prepare": "husky install"
   },
   "dependencies": {
     "@ai-sdk/deepseek": "^0.1.12",
