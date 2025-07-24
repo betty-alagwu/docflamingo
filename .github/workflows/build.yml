@@ -20,4 +20,4 @@ jobs:
       - uses: ./.github/actions/run-command
         with:
           name: build project
-          command: npm build
+          command: npm run build
