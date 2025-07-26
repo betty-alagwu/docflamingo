@@ -36,11 +36,16 @@ export default function Home() {
             </div>
 
             <div className="hidden sm:flex items-center gap-4 sm:gap-6 lg:gap-10">
-              <button className="text-gray-400 transition-all hover:text-grey-header text-sm sm:text-lg font-medium leading-7">
+              <Button
+                variant="outline"
+                dimension="md"
+                href="/sign-in"
+                className="bg-transparent text-gray-400 border-none hover:text-grey-header hover:bg-transparent text-sm sm:text-lg font-medium leading-7 px-0"
+              >
                 Log in
-              </button>
+              </Button>
 
-              <Button variant="primary" dimension="md">
+              <Button variant="primary" dimension="md" href="/sign-up">
                 Start for free
               </Button>
             </div>
@@ -55,14 +60,14 @@ export default function Home() {
             <p className="text-gray-300 text-center text-base sm:text-lg md:text-xl max-w-sm mx-auto mt-6 sm:mt-8">
               Revlo helps modern software teams ship higher-quality code, 3x faster.
             </p>
-            <Button variant="primary" dimension="md" className="mt-6 sm:mt-8">
+            <Button variant="primary" dimension="md" className="mt-6 sm:mt-8" href="/sign-up">
               Get started for free
             </Button>
             <div className="flex items-center justify-center text-center pt-10">
               <Image
                 src="https://framerusercontent.com/images/ythxKCuT8XMplgloTlIu0Qmvb0.png?scale-down-to=512"
                 alt=""
-                width={200}
+                width={250}
                 height={160}
                 className="w-50 h-40"
               />
@@ -126,7 +131,7 @@ export default function Home() {
           <h1 className="text-white text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light">
             Built to make you extraordinarily productive
           </h1>
-          <Button variant="primary" dimension="md" className="mt-12 lg:mt-16">
+          <Button variant="primary" dimension="md" className="mt-12 lg:mt-16" href="/sign-up">
             Get started for free
           </Button>
           <div className="flex items-center justify-center text-center pt-4">

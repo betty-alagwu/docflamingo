@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           },
         }}
       >
-        <body className={`min-h-screen flex flex-col antialiased`}>{children}</body>
+        <body className={`min-h-screen flex flex-col antialiased bg-black`}>{children}</body>
       </ClerkProvider>
 
       <Script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-core.min.js" />
