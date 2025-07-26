@@ -41,7 +41,7 @@ export default async function DashboardPage() {
           </div>
         </div>
       </main>
-      <a href="https://github.com/apps/docflamingo-app/installations/select_target">
+      <a className="text-white" href="https://github.com/apps/revlo-ai/installations/select_target">
         Add repositories
       </a>
     </>

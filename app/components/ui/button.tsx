@@ -1,4 +1,5 @@
 import { clsx } from 'clsx';
+import Link from 'next/link';
 import React, { type ButtonHTMLAttributes } from 'react';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -49,9 +50,9 @@ export default function Button(props: ButtonProps) {
 
   if (href) {
     return (
-      <a href={href} className={classes}>
+      <Link href={href} className={classes}>
         {isLoading ? 'Loading...' : children}
-      </a>
+      </Link>
     );
   }
 
