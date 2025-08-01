@@ -10,7 +10,6 @@ export default async function DashboardPage() {
           analytics.
         </p>
 
-        {/* Add repositories section */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 sm:p-6 lg:p-8">
           <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold mb-3 sm:mb-4">Get Started</h2>
           <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">

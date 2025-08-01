@@ -16,16 +16,6 @@ export default function RepositoriesPage() {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Repo not found? Search here..."
-            className="w-full bg-gray-900 border border-gray-700 rounded-md px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-        </div>
-
-        {/* Empty State */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-8 text-center">
           <h2 className="text-xl font-semibold mb-4">
             CodeRabbit currently doesn&lsquo;t have access to repositories for this organization.

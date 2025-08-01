@@ -8,7 +8,6 @@ export default function AnalyticsPage() {
         <p className="text-gray-400 text-sm sm:text-base">
           Analytics dashboard showing AI code review metrics and insights.
         </p>
-        {/* Analytics content will be implemented later */}
       </div>
     </DashboardLayout>
   );
