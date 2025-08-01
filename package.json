@@ -27,6 +27,7 @@
     "@ai-sdk/openai": "^1.1.15",
     "@ai-sdk/react": "^1.1.18",
     "@clerk/nextjs": "6.9.12",
+    "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.3.1",
     "@trigger.dev/sdk": "3.3.17",
     "@types/node": "^22.10.7",
