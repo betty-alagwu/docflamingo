@@ -38,9 +38,9 @@ export function DashboardSidebar({ isCollapsed, onToggleAction }: SidebarProps) 
 
   return (
     <div
-      className={`w-16 lg:${isCollapsed ? 'w-16' : 'w-64'} bg-neutral-800 border-r border-neutral-700 flex flex-col transition-all duration-300 ease-in-out`}
+      className={`w-16 lg:${isCollapsed ? 'w-16' : 'w-64'} h-screen bg-neutral-800 border-r border-neutral-700 flex flex-col transition-all duration-300 ease-in-out`}
     >
-      <div className="flex items-center justify-between p-4 border-b border-neutral-700">
+      <div className="flex items-center justify-between p-[18px] border-b border-neutral-700">
         <div className="hidden lg:flex items-center space-x-2">
           {!isCollapsed && (
             <>
