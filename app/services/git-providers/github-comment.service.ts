@@ -13,12 +13,8 @@ import type { Comment, GithubPullRequestComment } from '@/app/interfaces/comment
 import type { ProcessCommentWebhookTaskPayload } from '@/app/trigger/process-comment-webhook';
 
 export class GithubCommentService {
-  protected app = new App({
-    appId: env.GITHUB_APP_CLIENT_ID,
-    privateKey: env.GITHUB_APP_PRIVATE_KEY,
-  });
-
-  protected octokit!: Awaited<ReturnType<typeof this.app.getInstallationOctokit>>;
+  protected app?: App;
+  protected octokit!: Awaited<ReturnType<typeof App.prototype.getInstallationOctokit>>;
   private aiService: AIService;
   private tokenHandler: TokenHandler;
 
@@ -35,8 +31,19 @@ export class GithubCommentService {
     });
   }
 
+  private getApp(): App {
+    if (!this.app) {
+      this.app = new App({
+        appId: env.GITHUB_APP_CLIENT_ID,
+        privateKey: env.GITHUB_APP_PRIVATE_KEY,
+      });
+    }
+    return this.app;
+  }
+
   public async initialize(): Promise<void> {
-    this.octokit = await this.app.getInstallationOctokit(this.payload.installation.id);
+    const app = this.getApp();
+    this.octokit = await app.getInstallationOctokit(this.payload.installation.id);
   }
 
   public async processGithubUserReply() {
@@ -152,19 +159,21 @@ export class GithubCommentService {
         );
 
         // Validate comments against our schema
-        const allComments = rawComments.map((comment) =>
+        const allComments = rawComments.map((comment: GithubPullRequestComment) =>
           githubPullRequestCommentSchema.parse(comment)
         );
 
         let rootCommentId = this.payload.comment.in_reply_to_id;
-        const rootComment = allComments.find((comment) => comment.id === rootCommentId);
+        const rootComment = allComments.find(
+          (comment: GithubPullRequestComment) => comment.id === rootCommentId
+        );
 
         if (rootComment && rootComment.in_reply_to_id) {
           rootCommentId = rootComment.in_reply_to_id;
         }
 
         const threadComments = allComments.filter(
-          (comment) =>
+          (comment: GithubPullRequestComment) =>
             comment.id === rootCommentId ||
             comment.in_reply_to_id === rootCommentId ||
             comment.id === this.payload.comment.in_reply_to_id ||
@@ -173,23 +182,15 @@ export class GithubCommentService {
 
         logger.info(`Found ${threadComments.length} comments in this thread`);
         const currentCommentInThread = threadComments.some(
-          (comment) => comment.id === this.payload.comment.id
+          (comment: GithubPullRequestComment) => comment.id === this.payload.comment.id
         );
 
-        const mappedComments = threadComments.map((comment) => this.mapGithubComment(comment));
+        const mappedComments = threadComments.map((comment: GithubPullRequestComment) =>
+          this.mapGithubComment(comment)
+        );
 
         if (!currentCommentInThread) {
-          mappedComments.push(
-            this.mapGithubComment({
-              id: this.payload.comment.id,
-              body: this.payload.comment.body,
-              user: this.payload.comment.user,
-              created_at: this.payload.comment.created_at,
-              updated_at: this.payload.comment.updated_at,
-              in_reply_to_id: this.payload.comment.in_reply_to_id,
-              commit_id: this.payload.comment.commit_id,
-            })
-          );
+          mappedComments.push(this.mapCurrentComment());
         }
 
         return mappedComments;
@@ -307,6 +308,32 @@ export class GithubCommentService {
       startLine: comment.start_line,
       originalLine: comment.original_line,
       subjectType: comment.subject_type,
+    };
+  }
+
+  private mapCurrentComment(): Comment {
+    const commentId = this.payload.comment.id.toString();
+    const inReplyToId = this.payload.comment.in_reply_to_id?.toString() || undefined;
+
+    const isBot = isAiBot(this.payload.comment.user?.login || '');
+
+    return {
+      id: commentId,
+      body: this.payload.comment.body || '',
+      isAiSuggestion: isBot,
+      createdAt: new Date(this.payload.comment.created_at),
+      user: this.payload.comment.user?.login || 'unknown',
+      inReplyToId: inReplyToId,
+      path: undefined, // Current comment from payload doesn't have path info
+      position: undefined,
+      line: undefined,
+      side: undefined,
+      commitId: this.payload.comment.commit_id,
+      diffHunk: undefined,
+      originalPosition: undefined,
+      startLine: undefined,
+      originalLine: undefined,
+      subjectType: undefined,
     };
   }
 

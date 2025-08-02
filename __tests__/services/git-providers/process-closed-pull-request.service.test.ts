@@ -1,12 +1,12 @@
 import { logger, runs, configure } from '@trigger.dev/sdk/v3';
 import { App } from 'octokit';
 
-import { prisma } from '@/app/database/prisma';
-import { ProcessClosedPullRequestService } from '@/app/services/process-closed-pull-request.service';
+import { prisma } from '../../../app/database/prisma';
+import { ProcessClosedPullRequestService } from '../../../app/services/process-closed-pull-request.service';
 
-import type { ProcessPullRequestWebhookTaskPayload } from '@/app/trigger/process-pull-request-webhook';
+import type { ProcessPullRequestWebhookTaskPayload } from '../../../app/trigger/process-pull-request-webhook';
 
-jest.mock('@/app/config/env', () => ({
+jest.mock('../../../app/config/env', () => ({
   env: {
     GITHUB_APP_CLIENT_ID: 'test-client-id',
     GITHUB_APP_PRIVATE_KEY: 'test-private-key',
@@ -32,7 +32,7 @@ jest.mock('octokit', () => {
   };
 });
 
-jest.mock('@/app/database/prisma', () => {
+jest.mock('../../../app/database/prisma', () => {
   const mockJob = {
     id: 'job-id-123',
     githubRepositoryId: 123,

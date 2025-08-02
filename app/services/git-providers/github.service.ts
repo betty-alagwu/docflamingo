@@ -3,6 +3,7 @@ import { setTimeout } from 'node:timers/promises';
 import { App } from 'octokit';
 
 import { env } from '@/app/config/env';
+import { type GitHubFileChange } from '@/app/schemas/github.schema';
 import { chunkArray } from '@/app/utils/chunk-array';
 import { extendPatch } from '@/app/utils/patch-processing';
 
@@ -24,19 +25,27 @@ export interface FilePatchInfo {
 }
 
 export class GithubService {
-  protected app = new App({
-    appId: env.GITHUB_APP_CLIENT_ID,
-    privateKey: env.GITHUB_APP_PRIVATE_KEY,
-  });
-
-  protected octokit!: Awaited<ReturnType<typeof this.app.getInstallationOctokit>>;
+  protected app?: App;
+  protected octokit!: Awaited<ReturnType<typeof App.prototype.getInstallationOctokit>>;
   private aiService: AIService;
 
   constructor(protected payload: ProcessPullRequestWebhookTaskPayload) {
     this.aiService = new AIService();
   }
+
+  private getApp(): App {
+    if (!this.app) {
+      this.app = new App({
+        appId: env.GITHUB_APP_CLIENT_ID,
+        privateKey: env.GITHUB_APP_PRIVATE_KEY,
+      });
+    }
+    return this.app;
+  }
+
   public async initialise() {
-    this.octokit = await this.app.getInstallationOctokit(this.payload.installation.id);
+    const app = this.getApp();
+    this.octokit = await app.getInstallationOctokit(this.payload.installation.id);
   }
 
   public async analyzePullRequestWithLLM(): Promise<void> {
@@ -87,7 +96,7 @@ export class GithubService {
       }
     );
 
-    const pullRequestFilesChunks = chunkArray(pullRequestFiles.data, 5);
+    const pullRequestFilesChunks = chunkArray(pullRequestFiles.data as GitHubFileChange[], 5);
 
     const filesPatchInfo: FilePatchInfo[] = [];
     const patchExtraLinesBefore = 3;
@@ -95,7 +104,7 @@ export class GithubService {
 
     for (const chunk of pullRequestFilesChunks) {
       const results = await Promise.allSettled(
-        chunk.map(async (file) => {
+        chunk.map(async (file: GitHubFileChange) => {
           const newContent = await this.getFileContent(this.payload.head.sha, file.filename);
 
           let originalContent = { content: '' };
@@ -116,11 +125,11 @@ export class GithubService {
             num_minus_lines = file.deletions;
           } else {
             num_plus_lines = file.patch
-              ? file.patch.split('\n').filter((line) => line.startsWith('+')).length
+              ? file.patch.split('\n').filter((line: string) => line.startsWith('+')).length
               : 0;
 
             num_minus_lines = file.patch
-              ? file.patch.split('\n').filter((line) => line.startsWith('-')).length
+              ? file.patch.split('\n').filter((line: string) => line.startsWith('-')).length
               : 0;
           }
 

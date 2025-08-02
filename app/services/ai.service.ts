@@ -43,20 +43,27 @@ interface FormattedComment {
 export class AIService {
   private deepseek;
   private octokit!: Octokit;
-  private app;
+  private app?: App;
+
   constructor() {
     this.deepseek = createDeepSeek({
       apiKey: env.DEEPSEEK_API_KEY,
     });
+  }
 
-    this.app = new App({
-      appId: env.GITHUB_APP_CLIENT_ID,
-      privateKey: env.GITHUB_APP_PRIVATE_KEY,
-    });
+  private getApp(): App {
+    if (!this.app) {
+      this.app = new App({
+        appId: env.GITHUB_APP_CLIENT_ID,
+        privateKey: env.GITHUB_APP_PRIVATE_KEY,
+      });
+    }
+    return this.app;
   }
 
   private async authenticate(owner: string, repo: string) {
-    const { data: installations } = await this.app.octokit.request('GET /app/installations');
+    const app = this.getApp();
+    const { data: installations } = await app.octokit.request('GET /app/installations');
     const validatedInstallations = githubInstallationsSchema.parse(installations);
     const installation = validatedInstallations.find((inst) => inst.account?.login === owner);
 
@@ -64,7 +71,7 @@ export class AIService {
       throw new Error(`No installation found for repository ${owner}/${repo}`);
     }
 
-    this.octokit = await this.app.getInstallationOctokit(installation.id);
+    this.octokit = await app.getInstallationOctokit(installation.id);
   }
 
   public async analyzePullRequest(
@@ -81,6 +88,8 @@ export class AIService {
       const { text } = await generateText({
         model: this.deepseek('deepseek-chat'),
         prompt: `${systemPrompt}\n\n${userPrompt}`,
+        maxTokens: 1000, // Limit response length
+        temperature: 0.7,
       });
 
       if (text) {
@@ -388,6 +397,7 @@ IMPORTANT GUIDELINES:
         model: this.deepseek('deepseek-chat'),
         prompt: `${systemPrompt}\n\n${prompt}`,
         maxTokens: 1000, // Limit response length
+        temperature: 0.7,
       });
 
       return text;

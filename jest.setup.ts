@@ -1,3 +1,6 @@
+// Set NODE_ENV to test to avoid CI fallback warnings
+process.env.NODE_ENV = 'test';
+
 // Mock environment variables for tests
 process.env.GITHUB_APP_CLIENT_ID = 'test-client-id';
 process.env.GITHUB_APP_CLIENT_SECRET = 'test-client-secret';

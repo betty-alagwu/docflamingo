@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const fs = require('fs');
+const path = require('path');
+
+// Check if we should use a custom config file
+const configFile = process.env.NEXT_CONFIG_FILE;
+
+// Default config
+let nextConfig = {
   images: {
     remotePatterns: [
       {
@@ -7,8 +14,51 @@ const nextConfig = {
         hostname: 'img.clerk.com',
         port: '',
       },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.jsdelivr.net',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'boring.withmono.com',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'framerusercontent.com',
+        port: '',
+      },
     ],
   },
+  reactStrictMode: true,
 };
+
+// If a custom config file is specified and exists, use it
+if (configFile && fs.existsSync(path.resolve(configFile))) {
+  console.log(`Using custom Next.js config from ${configFile}`);
+  const customConfig = require(`./${configFile}`);
+
+  // Merge configs, with custom config taking precedence
+  nextConfig = {
+    ...nextConfig,
+    ...customConfig,
+    // Merge nested objects like 'images' if they exist in both configs
+    images: {
+      ...(nextConfig.images || {}),
+      ...(customConfig.images || {}),
+    },
+  };
+}
 
 module.exports = nextConfig;
