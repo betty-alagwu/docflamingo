@@ -1,18 +1,7 @@
-/**
- * Environment configuration with lazy validation
- * No hardcoded dummy values - validation only happens when variables are accessed
- */
-
-/**
- * Get environment variable with runtime validation
- * Only validates when actually accessed, not at build time
- * In CI environments, returns empty string to allow builds to complete
- */
 function getEnv(key: string): string {
   const value = process.env[key];
 
   if (!value) {
-    // Allow builds to complete in CI environments
     if (process.env.CI === 'true') {
       return '';
     }
@@ -22,17 +11,10 @@ function getEnv(key: string): string {
   return value;
 }
 
-/**
- * Get environment variable with optional fallback
- */
 function getEnvOptional(key: string, fallback?: string): string | undefined {
   return process.env[key] ?? fallback;
 }
 
-/**
- * Environment configuration with lazy validation
- * Values are only validated when accessed, allowing builds to complete
- */
 export const env = {
   get GITHUB_APP_CLIENT_ID() {
     return getEnv('GITHUB_APP_CLIENT_ID');
@@ -53,10 +35,10 @@ export const env = {
     return getEnv('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY');
   },
   get NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL() {
-    return getEnvOptional('NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL', '/dashboard');
+    return getEnvOptional('NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL', '/overview');
   },
   get NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL() {
-    return getEnvOptional('NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL', '/dashboard');
+    return getEnvOptional('NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL', '/overview');
   },
   get DEEPSEEK_API_KEY() {
     return getEnv('DEEPSEEK_API_KEY');
